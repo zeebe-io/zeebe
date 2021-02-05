@@ -54,6 +54,12 @@ public interface ZeebeClientBuilder {
   ZeebeClientBuilder defaultJobWorkerMaxJobsActive(int maxJobsActive);
 
   /**
+   * @param minJobsActiveRatio Default value for {@link
+   *     JobWorkerBuilderStep3#minJobsActiveRatio(float)}. Default value is 0.3.
+   */
+  ZeebeClientBuilder defaultJobWorkerMinJobsActiveRatio(float minJobsActiveRatio);
+
+  /**
    * @param numThreads The number of threads for invocation of job workers. Setting this value to 0
    *     effectively disables subscriptions and workers. Default value is 1.
    */

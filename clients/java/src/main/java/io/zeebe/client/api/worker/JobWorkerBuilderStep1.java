@@ -68,7 +68,8 @@ public interface JobWorkerBuilderStep1 {
      * work on the job. When the time is over then the job can be assigned again by this or other
      * worker if it's not completed yet.
      *
-     * <p>If no timeout is set, then the default is used from the configuration.
+     * <p>If no time is set, the default from {@link
+     * ZeebeClientConfiguration#getDefaultJobTimeout()} is used.
      *
      * @param timeout the time in milliseconds
      * @return the builder for this worker
@@ -82,7 +83,8 @@ public interface JobWorkerBuilderStep1 {
      * work on the job. When the time is over then the job can be assigned again by this or other
      * worker if it's not completed yet.
      *
-     * <p>If no time is set then the default is used from the configuration.
+     * <p>If no time is set, the default from {@link
+     * ZeebeClientConfiguration#getDefaultJobTimeout()} is used.
      *
      * @param timeout the time as duration (e.g. "Duration.ofMinutes(5)")
      * @return the builder for this worker
@@ -94,7 +96,8 @@ public interface JobWorkerBuilderStep1 {
      *
      * <p>This name is used to identify the worker to which a job is exclusively assigned to.
      *
-     * <p>If no name is set then the default is used from the configuration.
+     * <p>If no name is set, the default from {@link
+     * ZeebeClientConfiguration#getDefaultJobWorkerName()} is used.
      *
      * @param workerName the name of the worker (e.g. "payment-service")
      * @return the builder for this worker
@@ -110,7 +113,8 @@ public interface JobWorkerBuilderStep1 {
      * workers the chance to work on the jobs. The worker will try to activate new jobs again when
      * jobs are completed (or marked as failed).
      *
-     * <p>If no maximum is set then the default, from the {@link ZeebeClientConfiguration}, is used.
+     * <p>If no maximum is set, the default from {@link
+     * ZeebeClientConfiguration#getDefaultJobWorkerMaxJobsActive()} is used.
      *
      * <p>Considerations:
      *
@@ -128,13 +132,29 @@ public interface JobWorkerBuilderStep1 {
     JobWorkerBuilderStep3 maxJobsActive(int maxJobsActive);
 
     /**
+     * Set the minimum number of jobs as a ratio of maxJobsActive.
+     *
+     * <p>When the number of active jobs drop below this threshold more jobs will be requested from
+     * the gateway. As long as more jobs are active, the job activation will be suspended. For
+     * instance, if maxJobsActive is 30 and minJobsActiveRatio is 0.3 the job activation will pause
+     * until less than 10 jobs are remaining.
+     *
+     * <p>If no minimum is set, the default from {@link
+     * ZeebeClientConfiguration#getDefaultJobWorkerMinJobsActiveRatio()} is used.
+     *
+     * @param minJobsActiveRatio
+     * @return the builder for this worker
+     */
+    JobWorkerBuilderStep3 minJobsActiveRatio(float minJobsActiveRatio);
+
+    /**
      * Set the maximal interval between polling for new jobs.
      *
      * <p>A job worker will automatically try to always activate new jobs after completing jobs. If
      * no jobs can be activated after completing the worker will periodically poll for new jobs.
      *
-     * <p>If no poll interval is set then the default is used from the {@link
-     * ZeebeClientConfiguration}
+     * <p>If no poll interval is set, the default from {@link
+     * ZeebeClientConfiguration#getDefaultJobPollInterval()} is used.
      *
      * @param pollInterval the maximal interval to check for new jobs
      * @return the builder for this worker
@@ -144,8 +164,8 @@ public interface JobWorkerBuilderStep1 {
     /**
      * Set the request timeout for activate job request used to poll for new job.
      *
-     * <p>If no request timeout is set then the default is used from the {@link
-     * ZeebeClientConfiguration}
+     * <p>If no request timeout is set, the default from {@link
+     * ZeebeClientConfiguration#getDefaultRequestTimeout()} is used.
      *
      * @param requestTimeout the request timeout for activate jobs request
      * @return the builder for this worker

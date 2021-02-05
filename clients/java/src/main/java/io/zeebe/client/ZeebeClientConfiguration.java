@@ -38,6 +38,9 @@ public interface ZeebeClientConfiguration {
   /** @see ZeebeClientBuilder#defaultJobWorkerMaxJobsActive(int) */
   int getDefaultJobWorkerMaxJobsActive();
 
+  /** @see ZeebeClientBuilder#defaultJobWorkerMinJobsActiveRatio(float) */
+  float getDefaultJobWorkerMinJobsActiveRatio();
+
   /** @see ZeebeClientBuilder#defaultJobWorkerName(String) */
   String getDefaultJobWorkerName();
 

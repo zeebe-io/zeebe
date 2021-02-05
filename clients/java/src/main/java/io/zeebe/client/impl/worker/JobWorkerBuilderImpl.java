@@ -16,6 +16,7 @@
 package io.zeebe.client.impl.worker;
 
 import static io.zeebe.client.impl.command.ArgumentUtil.ensureGreaterThan;
+import static io.zeebe.client.impl.command.ArgumentUtil.ensureGreaterThanOrEqualTo;
 import static io.zeebe.client.impl.command.ArgumentUtil.ensureNotNull;
 import static io.zeebe.client.impl.command.ArgumentUtil.ensureNotNullNorEmpty;
 
@@ -57,6 +58,8 @@ public final class JobWorkerBuilderImpl
   private Duration requestTimeout;
   private List<String> fetchVariables;
 
+  private float minJobsActiveRatio;
+
   public JobWorkerBuilderImpl(
       final ZeebeClientConfiguration configuration,
       final GatewayStub gatewayStub,
@@ -74,6 +77,7 @@ public final class JobWorkerBuilderImpl
     timeout = configuration.getDefaultJobTimeout().toMillis();
     workerName = configuration.getDefaultJobWorkerName();
     maxJobsActive = configuration.getDefaultJobWorkerMaxJobsActive();
+    minJobsActiveRatio = configuration.getDefaultJobWorkerMinJobsActiveRatio();
     pollInterval = configuration.getDefaultJobPollInterval();
     requestTimeout = configuration.getDefaultRequestTimeout();
     this.retryPredicate = retryPredicate;
@@ -115,6 +119,12 @@ public final class JobWorkerBuilderImpl
   }
 
   @Override
+  public JobWorkerBuilderStep3 minJobsActiveRatio(float minJobsActiveRatio) {
+    this.minJobsActiveRatio = minJobsActiveRatio;
+    return this;
+  }
+
+  @Override
   public JobWorkerBuilderStep3 pollInterval(final Duration pollInterval) {
     this.pollInterval = pollInterval;
     return this;
@@ -143,6 +153,7 @@ public final class JobWorkerBuilderImpl
     ensureGreaterThan("timeout", timeout, 0L);
     ensureNotNullNorEmpty("workerName", workerName);
     ensureGreaterThan("maxJobsActive", maxJobsActive, 0);
+    ensureGreaterThanOrEqualTo("minJobsActiveRatio", minJobsActiveRatio, 0.0f);
 
     final Builder requestBuilder =
         ActivateJobsRequest.newBuilder()
@@ -164,7 +175,12 @@ public final class JobWorkerBuilderImpl
 
     final JobWorkerImpl jobWorker =
         new JobWorkerImpl(
-            maxJobsActive, executorService, pollInterval, jobRunnableFactory, jobPoller);
+            maxJobsActive,
+            minJobsActiveRatio,
+            executorService,
+            pollInterval,
+            jobRunnableFactory,
+            jobPoller);
     closeables.add(jobWorker);
     return jobWorker;
   }

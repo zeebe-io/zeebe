@@ -34,6 +34,10 @@ public final class ClientProperties {
   /** @see ZeebeClientBuilder#defaultJobWorkerMaxJobsActive(int) */
   public static final String JOB_WORKER_MAX_JOBS_ACTIVE = "zeebe.client.worker.maxJobsActive";
 
+  /** @see ZeebeClientBuilder#defaultJobWorkerMinJobsActiveRatio(float) */
+  public static final String JOB_WORKER_MIN_JOBS_ACTIVE_RATIO =
+      "zeebe.client.worker.minJobsActiveRatio";
+
   /** @see ZeebeClientBuilder#defaultJobWorkerName(String) */
   public static final String DEFAULT_JOB_WORKER_NAME = "zeebe.client.worker.name";
 

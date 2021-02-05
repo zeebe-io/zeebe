@@ -17,4 +17,14 @@
     <method>io.zeebe.client.api.JsonMapper getJsonMapper()</method>
     <differenceType>7012</differenceType>
   </difference>
+  <difference>
+    <className>io/zeebe/client/ZeebeClientBuilder</className>
+    <method>io.zeebe.client.ZeebeClientBuilder defaultJobWorkerMinJobsActiveRatio(float)</method>
+    <differenceType>7012</differenceType>
+  </difference>
+  <difference>
+    <className>io/zeebe/client/ZeebeClientConfiguration</className>
+    <method>float getDefaultJobWorkerMinJobsActiveRatio()</method>
+    <differenceType>7012</differenceType>
+  </difference>
 </differences>

@@ -34,7 +34,7 @@ public final class JobWorkerImpl implements JobWorker, Closeable {
 
   // job queue state
   private final int maxJobsActive;
-  private final int activationThreshold;
+  private final int minJobsActive;
   private final AtomicInteger remainingJobs;
 
   // job execution facilities
@@ -51,9 +51,19 @@ public final class JobWorkerImpl implements JobWorker, Closeable {
       final Duration pollInterval,
       final JobRunnableFactory jobRunnableFactory,
       final JobPoller jobPoller) {
+    this(maxJobsActive, 0.3f, executor, pollInterval, jobRunnableFactory, jobPoller);
+  }
+
+  public JobWorkerImpl(
+      final int maxJobsActive,
+      final float minJobsActiveRatio,
+      final ScheduledExecutorService executor,
+      final Duration pollInterval,
+      final JobRunnableFactory jobRunnableFactory,
+      final JobPoller jobPoller) {
 
     this.maxJobsActive = maxJobsActive;
-    activationThreshold = Math.round(maxJobsActive * 0.3f);
+    minJobsActive = Math.round(maxJobsActive * minJobsActiveRatio);
     remainingJobs = new AtomicInteger(0);
 
     this.executor = executor;
@@ -94,10 +104,10 @@ public final class JobWorkerImpl implements JobWorker, Closeable {
       // to avoid race conditions that would let us exceed the buffer size
       final int currentRemainingJobs = remainingJobs.get();
       if (shouldActivateJobs(currentRemainingJobs)) {
-        final int maxActivatedJobs = maxJobsActive - currentRemainingJobs;
+        final int maxJobsToActivate = maxJobsActive - currentRemainingJobs;
         try {
           jobPoller.poll(
-              maxActivatedJobs,
+              maxJobsToActivate,
               this::submitJob,
               activatedJobs -> {
                 remainingJobs.addAndGet(activatedJobs);
@@ -115,7 +125,7 @@ public final class JobWorkerImpl implements JobWorker, Closeable {
   }
 
   private boolean shouldActivateJobs(final int remainingJobs) {
-    return acquiringJobs.get() && remainingJobs <= activationThreshold;
+    return acquiringJobs.get() && remainingJobs <= minJobsActive;
   }
 
   private void submitJob(final ActivatedJob job) {

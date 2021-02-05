@@ -53,6 +53,7 @@ public final class ZeebeClientTest extends ClientTest {
       // then
       assertThat(configuration.getGatewayAddress()).isEqualTo("0.0.0.0:26500");
       assertThat(configuration.getDefaultJobWorkerMaxJobsActive()).isEqualTo(32);
+      assertThat(configuration.getDefaultJobWorkerMinJobsActiveRatio()).isEqualTo(0.3f);
       assertThat(configuration.getNumJobWorkerExecutionThreads()).isEqualTo(1);
       assertThat(configuration.getDefaultJobWorkerName()).isEqualTo("default");
       assertThat(configuration.getDefaultJobTimeout()).isEqualTo(Duration.ofMinutes(5));
