@@ -8,7 +8,9 @@
 
 closes #
 
-<!--
+<!-- Cut-off marker
+_All lines under and including the cut-off marker will be removed from the merge commit message_
+
 ## Definition of Ready
 
 Please check the items that apply, before requesting a review.

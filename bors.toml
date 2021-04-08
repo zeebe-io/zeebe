@@ -8,4 +8,5 @@ delete_merged_branches = true
 
 commit_title = "merge: ${PR_REFS}"
 
-cut_body_after = "# Pull Request Checklist"
+# Also cuts the marker, not just after
+cut_body_after = "<!-- Cut-off marker"
