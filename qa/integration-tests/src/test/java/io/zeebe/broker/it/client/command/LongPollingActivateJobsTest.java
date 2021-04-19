@@ -9,6 +9,7 @@ package io.zeebe.broker.it.client.command;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.netty.util.NetUtil;
 import io.zeebe.broker.it.util.GrpcClientRule;
 import io.zeebe.broker.system.configuration.BrokerCfg;
 import io.zeebe.broker.test.EmbeddedBrokerRule;
@@ -17,7 +18,6 @@ import io.zeebe.client.api.ZeebeFuture;
 import io.zeebe.client.api.response.ActivateJobsResponse;
 import io.zeebe.client.api.response.ActivatedJob;
 import io.zeebe.test.util.BrokerClassRuleHelper;
-import io.zeebe.util.SocketUtil;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -144,7 +144,7 @@ public class LongPollingActivateJobsTest {
     for (int i = 0; i < count; i++) {
       final ZeebeClient client =
           ZeebeClient.newClientBuilder()
-              .gatewayAddress(SocketUtil.toHostAndPortString(BROKER_RULE.getGatewayAddress()))
+              .gatewayAddress(NetUtil.toSocketAddressString(BROKER_RULE.getGatewayAddress()))
               .usePlaintext()
               .build();
 

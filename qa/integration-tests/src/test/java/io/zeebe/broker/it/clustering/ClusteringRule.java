@@ -25,6 +25,7 @@ import io.atomix.cluster.protocol.SwimMembershipProtocol;
 import io.atomix.core.Atomix;
 import io.atomix.raft.partition.RaftPartition;
 import io.atomix.utils.net.Address;
+import io.netty.util.NetUtil;
 import io.zeebe.broker.Broker;
 import io.zeebe.broker.PartitionListener;
 import io.zeebe.broker.SpringBrokerBridge;
@@ -202,7 +203,7 @@ public final class ClusteringRule extends ExternalResource {
             .map(BrokerCfg::getNetwork)
             .map(NetworkCfg::getInternalApi)
             .map(SocketBindingCfg::getAddress)
-            .map(io.zeebe.util.SocketUtil::toHostAndPortString)
+            .map(NetUtil::toSocketAddressString)
             .toArray(String[]::new);
 
     for (int nodeId = 0; nodeId < clusterSize; nodeId++) {
@@ -304,7 +305,7 @@ public final class ClusteringRule extends ExternalResource {
       // https://github.com/zeebe-io/zeebe/issues/2012
 
       setInitialContactPoints(
-              io.zeebe.util.SocketUtil.toHostAndPortString(
+              NetUtil.toSocketAddressString(
                   getBrokerCfg(0).getNetwork().getInternalApi().getAddress()))
           .accept(brokerCfg);
     }
@@ -329,8 +330,7 @@ public final class ClusteringRule extends ExternalResource {
 
   private Gateway createGateway() {
     final String contactPoint =
-        io.zeebe.util.SocketUtil.toHostAndPortString(
-            getBrokerCfg(0).getNetwork().getInternalApi().getAddress());
+        NetUtil.toSocketAddressString(getBrokerCfg(0).getNetwork().getInternalApi().getAddress());
 
     final GatewayCfg gatewayCfg = new GatewayCfg();
     gatewayCfg.getCluster().setContactPoint(contactPoint).setClusterName(clusterName);
@@ -374,8 +374,7 @@ public final class ClusteringRule extends ExternalResource {
 
   private ZeebeClient createClient() {
     final String contactPoint =
-        io.zeebe.util.SocketUtil.toHostAndPortString(
-            gateway.getGatewayCfg().getNetwork().toSocketAddress());
+        NetUtil.toSocketAddressString(gateway.getGatewayCfg().getNetwork().toSocketAddress());
     final ZeebeClientBuilder zeebeClientBuilder =
         ZeebeClient.newClientBuilder().gatewayAddress(contactPoint);
 

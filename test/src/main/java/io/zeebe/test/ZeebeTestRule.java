@@ -7,13 +7,13 @@
  */
 package io.zeebe.test;
 
+import io.netty.util.NetUtil;
 import io.zeebe.broker.system.configuration.BrokerCfg;
 import io.zeebe.client.ClientProperties;
 import io.zeebe.client.ZeebeClient;
 import io.zeebe.client.api.response.WorkflowInstanceEvent;
 import io.zeebe.test.util.record.RecordingExporter;
 import io.zeebe.test.util.record.RecordingExporterTestWatcher;
-import io.zeebe.util.SocketUtil;
 import io.zeebe.util.sched.clock.ControlledActorClock;
 import java.util.Properties;
 import java.util.function.Supplier;
@@ -40,7 +40,7 @@ public class ZeebeTestRule extends ExternalResource {
               final Properties properties = propertiesProvider.get();
               properties.setProperty(
                   ClientProperties.BROKER_CONTACTPOINT,
-                  SocketUtil.toHostAndPortString(brokerRule.getGatewayAddress()));
+                  NetUtil.toSocketAddressString(brokerRule.getGatewayAddress()));
               properties.putIfAbsent(ClientProperties.USE_PLAINTEXT_CONNECTION, "true");
 
               return properties;

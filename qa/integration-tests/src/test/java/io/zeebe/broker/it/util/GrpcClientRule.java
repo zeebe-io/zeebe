@@ -10,6 +10,7 @@ package io.zeebe.broker.it.util;
 import static io.zeebe.test.util.TestUtil.waitUntil;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.netty.util.NetUtil;
 import io.zeebe.broker.TestLoggers;
 import io.zeebe.broker.it.clustering.ClusteringRule;
 import io.zeebe.broker.test.EmbeddedBrokerRule;
@@ -25,7 +26,6 @@ import io.zeebe.protocol.record.Record;
 import io.zeebe.protocol.record.intent.DeploymentIntent;
 import io.zeebe.protocol.record.intent.JobIntent;
 import io.zeebe.test.util.record.RecordingExporter;
-import io.zeebe.util.SocketUtil;
 import java.time.Duration;
 import java.util.List;
 import java.util.function.Consumer;
@@ -51,8 +51,7 @@ public final class GrpcClientRule extends ExternalResource {
     this(
         config -> {
           config
-              .gatewayAddress(
-                  io.zeebe.util.SocketUtil.toHostAndPortString(brokerRule.getGatewayAddress()))
+              .gatewayAddress(NetUtil.toSocketAddressString(brokerRule.getGatewayAddress()))
               .usePlaintext();
           configurator.accept(config);
         });
@@ -62,7 +61,7 @@ public final class GrpcClientRule extends ExternalResource {
     this(
         config ->
             config
-                .gatewayAddress(SocketUtil.toHostAndPortString(clusteringRule.getGatewayAddress()))
+                .gatewayAddress(NetUtil.toSocketAddressString(clusteringRule.getGatewayAddress()))
                 .usePlaintext());
   }
 

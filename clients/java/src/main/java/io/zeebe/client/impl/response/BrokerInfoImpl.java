@@ -15,6 +15,7 @@
  */
 package io.zeebe.client.impl.response;
 
+import io.netty.util.NetUtil;
 import io.zeebe.client.api.response.BrokerInfo;
 import io.zeebe.client.api.response.PartitionInfo;
 import io.zeebe.gateway.protocol.GatewayOuterClass;
@@ -58,7 +59,7 @@ public final class BrokerInfoImpl implements BrokerInfo {
 
   @Override
   public String getAddress() {
-    return String.format("%s:%d", host, port);
+    return NetUtil.toSocketAddressString(host, port);
   }
 
   @Override

@@ -9,12 +9,12 @@ package io.zeebe.broker.it.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.netty.util.NetUtil;
 import io.zeebe.broker.it.clustering.ClusteringRule;
 import io.zeebe.broker.it.util.GrpcClientRule;
 import io.zeebe.client.ZeebeClientBuilder;
 import io.zeebe.client.api.response.Topology;
 import io.zeebe.gateway.impl.configuration.GatewayCfg;
-import io.zeebe.util.SocketUtil;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
@@ -32,7 +32,7 @@ public final class SecurityTest {
           cfg ->
               configureClientForTls(
                   cfg.gatewayAddress(
-                      SocketUtil.toHostAndPortString(clusteringRule.getGatewayAddress()))));
+                      NetUtil.toSocketAddressString(clusteringRule.getGatewayAddress()))));
 
   @Rule
   public RuleChain ruleChain =

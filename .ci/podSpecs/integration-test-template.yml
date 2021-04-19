@@ -37,9 +37,12 @@ spec:
       securityContext:
         privileged: true
     - name: docker
-      image: docker:19.03.13-dind
+      image: docker:20.10.5-dind
       args:
         - --storage-driver=overlay
+        - --ipv6
+        - --fixed-cidr-v6
+        - "2001:db8:1::/64"
       env:
         # The new dind versions expect secure access using cert
         # Setting DOCKER_TLS_CERTDIR to empty string will disable the secure access

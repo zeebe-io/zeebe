@@ -16,6 +16,7 @@ import io.atomix.cluster.AtomixCluster;
 import io.atomix.cluster.Node;
 import io.atomix.cluster.discovery.BootstrapDiscoveryProvider;
 import io.atomix.utils.net.Address;
+import io.netty.util.NetUtil;
 import io.zeebe.gateway.cmd.BrokerErrorException;
 import io.zeebe.gateway.cmd.BrokerRejectionException;
 import io.zeebe.gateway.cmd.ClientResponseException;
@@ -73,7 +74,7 @@ public final class BrokerClientTest {
         .getCluster()
         .setHost("0.0.0.0")
         .setPort(SocketUtil.getNextAddress().getPort())
-        .setContactPoint(io.zeebe.util.SocketUtil.toHostAndPortString(broker.getSocketAddress()))
+        .setContactPoint(NetUtil.toSocketAddressString(broker.getSocketAddress()))
         .setRequestTimeout(Duration.ofSeconds(3));
     configuration.init();
 

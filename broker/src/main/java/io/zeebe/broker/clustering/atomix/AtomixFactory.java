@@ -151,11 +151,7 @@ public final class AtomixFactory {
     final List<Node> nodes = new ArrayList<>();
     initialContactPoints.forEach(
         contactAddress -> {
-          final String[] address = contactAddress.split(":");
-          final int memberPort = Integer.parseInt(address[1]);
-
-          final Node node =
-              Node.builder().withAddress(Address.from(address[0], memberPort)).build();
+          final Node node = Node.builder().withAddress(Address.from(contactAddress)).build();
           LOG.debug("Member {} will contact node: {}", localMemberId, node.address());
           nodes.add(node);
         });

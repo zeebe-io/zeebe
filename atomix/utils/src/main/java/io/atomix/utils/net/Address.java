@@ -16,6 +16,7 @@
  */
 package io.atomix.utils.net;
 
+import com.google.common.net.HostAndPort;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -61,30 +62,13 @@ public final class Address {
    * @return the address
    */
   public static Address from(final String address) {
-    final int lastColon = address.lastIndexOf(':');
-    final int openBracket = address.indexOf('[');
-    final int closeBracket = address.indexOf(']');
-
-    final String host;
-    if (openBracket != -1 && closeBracket != -1) {
-      host = address.substring(openBracket + 1, closeBracket);
-    } else if (lastColon != -1) {
-      host = address.substring(0, lastColon);
-    } else {
-      host = address;
+    try {
+      final HostAndPort parsedAddress =
+          HostAndPort.fromString(address).withDefaultPort(DEFAULT_PORT);
+      return new Address(parsedAddress.getHost(), parsedAddress.getPort());
+    } catch (final IllegalStateException e) {
+      return from(DEFAULT_PORT);
     }
-
-    final int port;
-    if (lastColon != -1) {
-      try {
-        port = Integer.parseInt(address.substring(lastColon + 1));
-      } catch (final NumberFormatException e) {
-        throw new MalformedAddressException(address, e);
-      }
-    } else {
-      port = DEFAULT_PORT;
-    }
-    return new Address(host, port);
   }
 
   /**

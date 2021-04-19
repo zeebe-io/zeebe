@@ -15,6 +15,7 @@ import io.atomix.core.Atomix;
 import io.atomix.raft.partition.RaftPartition;
 import io.atomix.raft.partition.RaftPartitionGroup;
 import io.atomix.utils.net.Address;
+import io.netty.util.NetUtil;
 import io.zeebe.broker.bootstrap.CloseProcess;
 import io.zeebe.broker.bootstrap.StartProcess;
 import io.zeebe.broker.clustering.atomix.AtomixFactory;
@@ -76,7 +77,6 @@ import io.zeebe.snapshots.broker.impl.FileBasedSnapshotStoreFactory;
 import io.zeebe.transport.ServerTransport;
 import io.zeebe.transport.TransportFactory;
 import io.zeebe.util.LogUtil;
-import io.zeebe.util.SocketUtil;
 import io.zeebe.util.VersionUtil;
 import io.zeebe.util.exception.UncheckedExecutionException;
 import io.zeebe.util.sched.Actor;
@@ -202,7 +202,7 @@ public final class Broker implements AutoCloseable {
     final BrokerInfo localBroker =
         new BrokerInfo(
             clusterCfg.getNodeId(),
-            SocketUtil.toHostAndPortString(networkCfg.getCommandApi().getAdvertisedAddress()));
+            NetUtil.toSocketAddressString(networkCfg.getCommandApi().getAdvertisedAddress()));
 
     final StartProcess startContext = new StartProcess("Broker-" + localBroker.getNodeId());
 

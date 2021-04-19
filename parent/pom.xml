@@ -44,6 +44,7 @@
     <version.commons-logging>1.2</version.commons-logging>
     <version.commons-math>3.6.1</version.commons-math>
     <version.commons-codec>1.15</version.commons-codec>
+    <version.docker-java-api>3.2.5</version.docker-java-api>
     <version.elasticsearch>6.8.12</version.elasticsearch>
     <version.error-prone>2.4.0</version.error-prone>
     <version.grpc>1.33.0</version.grpc>
@@ -56,6 +57,7 @@
     <version.httpcomponents>4.4.13</version.httpcomponents>
     <version.jackson>2.11.3</version.jackson>
     <version.java-grpc-prometheus>0.3.0</version.java-grpc-prometheus>
+    <version.jna>5.5.0</version.jna>
     <version.junit>5.7.0</version.junit>
     <version.junit4>4.13.1</version.junit4>
     <version.opentest4j>1.2.0</version.opentest4j>
@@ -81,7 +83,7 @@
     <version.wiremock>2.27.2</version.wiremock>
     <version.conscrypt>2.5.1</version.conscrypt>
     <version.asm>9.0</version.asm>
-    <version.testcontainers>1.14.3</version.testcontainers>
+    <version.testcontainers>1.15.1</version.testcontainers>
     <version.netflix.concurrency>0.3.6</version.netflix.concurrency>
     <version.zeebe-test-container>1.0.0</version.zeebe-test-container>
     <version.feel-scala>1.12.2</version.feel-scala>
@@ -576,6 +578,47 @@
         <groupId>org.testcontainers</groupId>
         <artifactId>toxiproxy</artifactId>
         <version>${version.testcontainers}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.testcontainers</groupId>
+        <artifactId>elasticsearch</artifactId>
+        <version>${version.testcontainers}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>com.github.docker-java</groupId>
+        <artifactId>docker-java-api</artifactId>
+        <version>${version.docker-java-api}</version>
+      </dependency>
+
+      <!--
+        primarily for dependency convergence with testcontainers
+        see https://github.com/testcontainers/testcontainers-java/issues/3308
+      -->
+      <dependency>
+        <groupId>net.java.dev.jna</groupId>
+        <artifactId>jna</artifactId>
+        <version>${version.jna}</version>
+      </dependency>
+
+
+
+      <dependency>
+        <groupId>net.jqwik</groupId>
+        <artifactId>jqwik</artifactId>
+        <version>${version.jqwik}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>net.jqwik</groupId>
+        <artifactId>jqwik-api</artifactId>
+        <version>${version.jqwik}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.jmock</groupId>
+        <artifactId>jmock</artifactId>
+        <version>${version.jmock}</version>
       </dependency>
 
       <dependency>
