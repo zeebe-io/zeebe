@@ -119,7 +119,10 @@ public class AdvertisedAddressTest {
             String.valueOf(monitoringApiProxy.getOriginalProxyPort()))
         // Since gossip does not work with ToxiProxy, increase the sync interval so changes are
         // propagated faster
-        .withEnv("ZEEBE_BROKER_CLUSTER_MEMBERSHIP_SYNCINTERVAL", "100ms");
+        .withEnv("ZEEBE_BROKER_CLUSTER_MEMBERSHIP_SYNCINTERVAL", "100ms")
+        // Allow for a higher timeout because resource constraints on the test system can cause high
+        // delay in responding to requests
+        .withEnv("ZEEBE_BROKER_CLUSTER_MEMBERSHIP_PROBETIMEOUT", "2000ms");
   }
 
   private void configureGateway(final ZeebeGatewayNode<?> gateway) {
