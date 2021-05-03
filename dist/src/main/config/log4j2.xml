@@ -39,6 +39,7 @@
     <Logger name="io.zeebe" level="${env:ZEEBE_LOG_LEVEL:-info}"/>
 
     <Logger name="io.atomix" level="${env:ATOMIX_LOG_LEVEL:-warn}"/>
+    <Logger name="io.atomix.cluster.protocol.SwimMembershipProtocol" level="debug"/>
 
     <Root level="info">
       <AppenderRef ref="RollingFile"/>
