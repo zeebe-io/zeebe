@@ -32,6 +32,7 @@ import org.slf4j.Logger;
 @SuppressWarnings("squid:S1200")
 public final class TopologyManagerImpl extends Actor
     implements TopologyManager, ClusterMembershipEventListener, PartitionListener {
+
   private static final Logger LOG = Loggers.CLUSTERING_LOGGER;
 
   private final Int2ObjectHashMap<BrokerInfo> partitionLeaders = new Int2ObjectHashMap<>();
@@ -276,6 +277,8 @@ public final class TopologyManagerImpl extends Actor
             localBroker.setPartitionHealthy(partitionId);
           } else if (status == HealthStatus.UNHEALTHY) {
             localBroker.setPartitionUnhealthy(partitionId);
+          } else if (status == HealthStatus.DEAD) {
+            localBroker.setPartitionDead(partitionId);
           }
           publishTopologyChanges();
         });

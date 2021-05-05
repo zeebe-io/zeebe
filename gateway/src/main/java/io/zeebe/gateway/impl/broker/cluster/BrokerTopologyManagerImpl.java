@@ -139,9 +139,7 @@ public final class BrokerTopologyManagerImpl extends Actor
         inactivePartitionId -> newTopology.addPartitionInactive(inactivePartitionId, nodeId));
 
     distributedBrokerInfo.consumePartitionsHealth(
-        newTopology::addPartitionIfAbsent,
-        partition -> newTopology.setPartitionHealthy(nodeId, partition),
-        partition -> newTopology.setPartitionUnhealthy(nodeId, partition));
+        (partition, health) -> newTopology.setPartitionHealthStatus(nodeId, partition, health));
 
     final String clientAddress = distributedBrokerInfo.getCommandApiAddress();
     if (clientAddress != null) {

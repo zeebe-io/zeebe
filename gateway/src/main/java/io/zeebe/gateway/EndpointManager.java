@@ -93,10 +93,21 @@ public final class EndpointManager {
               if (!setRole(brokerId, partitionId, topology, partitionBuilder)) {
                 return;
               }
-              if (topology.isPartitionHealthy(brokerId, partitionId)) {
-                partitionBuilder.setHealth(PartitionBrokerHealth.HEALTHY);
-              } else {
-                partitionBuilder.setHealth(PartitionBrokerHealth.UNHEALTHY);
+
+              final var status = topology.getPartitionHealth(brokerId, partitionId);
+              switch (status) {
+                case HEALTHY:
+                  partitionBuilder.setHealth(PartitionBrokerHealth.HEALTHY);
+                  break;
+                case UNHEALTHY:
+                  partitionBuilder.setHealth(PartitionBrokerHealth.UNHEALTHY);
+                  break;
+                case DEAD:
+                  partitionBuilder.setHealth(PartitionBrokerHealth.DEAD);
+                  break;
+                default:
+                  Loggers.GATEWAY_LOGGER.debug(
+                      "Unsupported partition broker health status '{}'", status.name());
               }
               brokerInfo.addPartitions(partitionBuilder);
             });

@@ -189,24 +189,6 @@ public final class BrokerClientImpl implements BrokerClient {
             .join();
   }
 
-  public <T> void sendRequestWithRetry(
-      final BrokerRequest<T> request,
-      final BrokerResponseConsumer<T> responseConsumer,
-      final Consumer<Throwable> throwableConsumer,
-      final Duration requestTimeout) {
-
-    requestManager
-        .sendRequestWithRetry(request, requestTimeout)
-        .whenComplete(
-            (response, error) -> {
-              if (error == null) {
-                responseConsumer.accept(response.getKey(), response.getResponse());
-              } else {
-                throwableConsumer.accept(error);
-              }
-            });
-  }
-
   private void doAndLogException(final Runnable r) {
     try {
       r.run();

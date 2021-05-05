@@ -64,6 +64,7 @@
     <enum name="PartitionHealthStatus" encodingType="uint8">
       <validValue name="UNHEALTHY">0</validValue>
       <validValue name="HEALTHY">1</validValue>
+      <validValue name="DEAD">2</validValue>
     </enum>
 
     <composite name="Version" description="Version information">

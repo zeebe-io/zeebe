@@ -304,7 +304,7 @@ public final class ZeebePartition extends Actor
   }
 
   private void handleUnrecoverableFailure() {
-    // TODO(#6664): set health metrics to dead
+    healthMetrics.setDead();
     zeebePartitionHealth.onUnrecoverableFailure();
     transitionToInactive();
     context.getRaftPartition().goInactive();

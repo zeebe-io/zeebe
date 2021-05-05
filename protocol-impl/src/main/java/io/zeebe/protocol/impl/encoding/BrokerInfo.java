@@ -41,6 +41,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
+import java.util.function.BiConsumer;
 import java.util.function.IntConsumer;
 import java.util.function.ObjLongConsumer;
 import org.agrona.DirectBuffer;
@@ -209,6 +210,11 @@ public final class BrokerInfo implements BufferReader, BufferWriter {
 
   public BrokerInfo setPartitionHealthy(final Integer partitionId) {
     addPartitionHealth(partitionId, PartitionHealthStatus.HEALTHY);
+    return this;
+  }
+
+  public BrokerInfo setPartitionDead(final Integer partitionId) {
+    addPartitionHealth(partitionId, PartitionHealthStatus.DEAD);
     return this;
   }
 
@@ -452,23 +458,8 @@ public final class BrokerInfo implements BufferReader, BufferWriter {
   }
 
   public BrokerInfo consumePartitionsHealth(
-      final IntConsumer partitionConsumer,
-      final IntConsumer partitionHealthyConsumer,
-      final IntConsumer partitionUnhealthyConsumer) {
-    partitionHealthStatuses.forEach(
-        (partition, health) -> {
-          partitionConsumer.accept(partition);
-          switch (health) {
-            case HEALTHY:
-              partitionHealthyConsumer.accept(partition);
-              break;
-            case UNHEALTHY:
-              partitionUnhealthyConsumer.accept(partition);
-              break;
-            default:
-              LOG.warn("Failed to decode broker info, found unknown health status: {}", health);
-          }
-        });
+      final BiConsumer<Integer, PartitionHealthStatus> partitionConsumer) {
+    partitionHealthStatuses.forEach(partitionConsumer);
     return this;
   }
 

@@ -16,6 +16,7 @@ import io.zeebe.gateway.protocol.GatewayOuterClass.Partition.PartitionBrokerHeal
 import io.zeebe.gateway.protocol.GatewayOuterClass.Partition.PartitionBrokerRole;
 import io.zeebe.gateway.protocol.GatewayOuterClass.TopologyRequest;
 import io.zeebe.gateway.protocol.GatewayOuterClass.TopologyResponse;
+import io.zeebe.protocol.record.PartitionHealthStatus;
 import java.util.Optional;
 import org.junit.Test;
 
@@ -43,7 +44,7 @@ public final class TopologyTest extends GatewayTest {
   public void shouldUpdatePartitionHealthHealthy() {
     // given
     final var topology = (BrokerClusterStateImpl) brokerClient.getTopologyManager().getTopology();
-    topology.setPartitionHealthy(0, 1);
+    topology.setPartitionHealthStatus(0, 1, PartitionHealthStatus.HEALTHY);
 
     // when
     final var response = client.topology(TopologyRequest.newBuilder().build());
@@ -57,7 +58,7 @@ public final class TopologyTest extends GatewayTest {
   public void shouldUpdatePartitionHealth() {
     // given
     final var topology = (BrokerClusterStateImpl) brokerClient.getTopologyManager().getTopology();
-    topology.setPartitionUnhealthy(0, 1);
+    topology.setPartitionHealthStatus(0, 1, PartitionHealthStatus.HEALTHY);
 
     // when
     final var response = client.topology(TopologyRequest.newBuilder().build());
@@ -71,8 +72,8 @@ public final class TopologyTest extends GatewayTest {
   public void shouldUpdateMultiplePartitionHealths() {
     // given
     final var topology = (BrokerClusterStateImpl) brokerClient.getTopologyManager().getTopology();
-    topology.setPartitionUnhealthy(0, 1);
-    topology.setPartitionHealthy(0, 6);
+    topology.setPartitionHealthStatus(0, 1, PartitionHealthStatus.HEALTHY);
+    topology.setPartitionHealthStatus(0, 6, PartitionHealthStatus.HEALTHY);
 
     // when
     final var response = client.topology(TopologyRequest.newBuilder().build());

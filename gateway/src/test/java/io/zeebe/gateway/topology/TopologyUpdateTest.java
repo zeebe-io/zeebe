@@ -17,6 +17,7 @@ import io.atomix.cluster.Member;
 import io.atomix.cluster.MemberConfig;
 import io.zeebe.gateway.impl.broker.cluster.BrokerTopologyManagerImpl;
 import io.zeebe.protocol.impl.encoding.BrokerInfo;
+import io.zeebe.protocol.record.PartitionHealthStatus;
 import io.zeebe.util.sched.clock.ControlledActorClock;
 import io.zeebe.util.sched.testing.ActorSchedulerRule;
 import java.time.Duration;
@@ -185,13 +186,18 @@ public final class TopologyUpdateTest {
     broker.setPartitionHealthy(partition);
     topologyManager.event(createMemberAddedEvent(broker));
     waitUntil(() -> topologyManager.getTopology() != null);
-    assertThat(topologyManager.getTopology().isPartitionHealthy(brokerId, partition)).isTrue();
+    assertThat(topologyManager.getTopology().getPartitionHealth(brokerId, partition))
+        .isEqualTo(PartitionHealthStatus.HEALTHY);
 
     final BrokerInfo updatedBroker = createBroker(0);
     updatedBroker.setPartitionUnhealthy(partition);
     topologyManager.event(createMemberUpdateEvent(updatedBroker));
-    waitUntil(() -> !topologyManager.getTopology().isPartitionHealthy(brokerId, partition));
-    assertThat(topologyManager.getTopology().isPartitionHealthy(brokerId, partition)).isFalse();
+    waitUntil(
+        () ->
+            topologyManager.getTopology().getPartitionHealth(brokerId, partition)
+                == PartitionHealthStatus.UNHEALTHY);
+    assertThat(topologyManager.getTopology().getPartitionHealth(brokerId, partition))
+        .isEqualTo(PartitionHealthStatus.UNHEALTHY);
   }
 
   @Test

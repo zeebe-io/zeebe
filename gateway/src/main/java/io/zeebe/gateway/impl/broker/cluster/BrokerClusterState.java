@@ -7,6 +7,7 @@
  */
 package io.zeebe.gateway.impl.broker.cluster;
 
+import io.zeebe.protocol.record.PartitionHealthStatus;
 import java.util.List;
 
 public interface BrokerClusterState {
@@ -43,5 +44,5 @@ public interface BrokerClusterState {
 
   String getBrokerVersion(int brokerId);
 
-  boolean isPartitionHealthy(int brokerId, int partition);
+  PartitionHealthStatus getPartitionHealth(int brokerId, int partition);
 }

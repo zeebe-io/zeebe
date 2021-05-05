@@ -268,6 +268,7 @@ message Partition {
   enum PartitionBrokerHealth {
     HEALTHY = 0;
     UNHEALTHY = 1;
+    DEAD = 2;
   }
 
   // the unique ID of this partition

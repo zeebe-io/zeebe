@@ -29,6 +29,10 @@
               {
                 "name": "UNHEALTHY",
                 "integer": 1
+              },
+              {
+                "name": "DEAD",
+                "integer": 2
               }
             ]
           }
