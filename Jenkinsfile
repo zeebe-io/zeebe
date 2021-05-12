@@ -29,7 +29,7 @@ itFlakyTestStashName = 'it-flakyTests'
 
 // the develop branch should be run at midnight to do a nightly build including QA test run
 // the latest stable branch is run an hour later at 01:00 AM.
-def cronTrigger = '50 * * * *'
+def cronTrigger = isDevelopBranch ? '0 0 * * *' : isLatestStable ? '0 1 * * *' : ''
 
 pipeline {
     agent {
@@ -46,9 +46,9 @@ pipeline {
         SONARCLOUD_TOKEN = credentials('zeebe-sonarcloud-token')
     }
 
-    triggers {
-        cron(cronTrigger)
-    }
+    // triggers {
+        // cron(cronTrigger)
+    // }
 
     options {
         buildDiscarder(logRotator(daysToKeepStr: daysToKeep, numToKeepStr: numToKeep))
