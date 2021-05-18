@@ -27,17 +27,21 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.Long2ObjectHashMap;
 import org.rocksdb.Checkpoint;
 import org.rocksdb.ColumnFamilyDescriptor;
 import org.rocksdb.ColumnFamilyHandle;
+import org.rocksdb.CompactionOptions;
 import org.rocksdb.DBOptions;
+import org.rocksdb.LevelMetaData;
 import org.rocksdb.OptimisticTransactionDB;
 import org.rocksdb.ReadOptions;
 import org.rocksdb.RocksDBException;
 import org.rocksdb.RocksIterator;
 import org.rocksdb.RocksObject;
+import org.rocksdb.SstFileMetaData;
 import org.rocksdb.Transaction;
 import org.rocksdb.WriteOptions;
 import org.slf4j.Logger;
@@ -174,10 +178,34 @@ public class ZeebeTransactionDb<ColumnFamilyNames extends Enum<ColumnFamilyNames
 
   @Override
   public void compactRange() {
-    try {
-      optimisticTransactionDB.compactRange();
-    } catch (final RocksDBException e) {
-      e.printStackTrace();
+    handelToEnumMap.forEach(
+        (num, handle) -> {
+          try {
+            optimisticTransactionDB.compactRange(handle);
+          } catch (final RocksDBException e) {
+            e.printStackTrace();
+          }
+        });
+  }
+
+  @Override
+  public void compactFiles(final List<String> filesToCompact) {
+    for (final ColumnFamilyHandle handle : handelToEnumMap.values()) {
+      try {
+        final var columnFamilyMetadata =
+            optimisticTransactionDB.getBaseDB().getColumnFamilyMetaData(handle);
+        final var filenames =
+            columnFamilyMetadata.levels().stream()
+                .map(LevelMetaData::files)
+                .flatMap(files -> files.stream().map(SstFileMetaData::fileName))
+                .collect(Collectors.toList());
+        if (!filenames.isEmpty()) {
+          optimisticTransactionDB.compactFiles(
+              new CompactionOptions(), handle, filenames, 2, -1, null);
+        }
+      } catch (final RocksDBException e) {
+        e.printStackTrace();
+      }
     }
   }
 
