@@ -142,6 +142,13 @@ public class StateControllerImpl implements StateController, PersistedSnapshotLi
     if (db == null) {
       db = zeebeDbFactory.createDb(runtimeDirectory.toFile());
       LOG.debug("Opened database from '{}'.", runtimeDirectory);
+      final var filesBeforeCompact = runtimeDirectory.toFile().listFiles().length;
+      db.compactRange();
+      final var filesAfterCompact = runtimeDirectory.toFile().listFiles().length;
+      LOG.info(
+          "Attempted to compact on startup - file count before {} after {}",
+          filesBeforeCompact,
+          filesAfterCompact);
     }
 
     return db;

@@ -172,6 +172,15 @@ public class ZeebeTransactionDb<ColumnFamilyNames extends Enum<ColumnFamilyNames
     return isEmpty(columnFamilyHandle, context);
   }
 
+  @Override
+  public void compactRange() {
+    try {
+      optimisticTransactionDB.compactRange();
+    } catch (final RocksDBException e) {
+      e.printStackTrace();
+    }
+  }
+
   protected void put(
       final long columnFamilyHandle,
       final DbContext context,
