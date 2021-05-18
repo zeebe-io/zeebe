@@ -8,7 +8,6 @@
 package io.zeebe.db;
 
 import java.io.File;
-import java.util.List;
 import java.util.Optional;
 
 /**
@@ -68,5 +67,5 @@ public interface ZeebeDb<ColumnFamilyType extends Enum<ColumnFamilyType>> extend
 
   void compactRange();
 
-  void compactFiles(List<String> filesToCompact);
+  void compactFiles();
 }

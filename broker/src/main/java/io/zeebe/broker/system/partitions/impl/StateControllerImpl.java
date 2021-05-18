@@ -25,11 +25,9 @@ import io.zeebe.util.sched.future.ActorFuture;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.ToLongFunction;
-import java.util.stream.Collectors;
 import org.agrona.collections.Object2NullableObjectHashMap;
 import org.slf4j.Logger;
 
@@ -146,18 +144,8 @@ public class StateControllerImpl implements StateController, PersistedSnapshotLi
       LOG.debug("Opened database from '{}'.", runtimeDirectory);
       final var filesBeforeCompact = runtimeDirectory.toFile().listFiles().length;
       // db.compactRange();
-      final List<String> filesToCompact;
-      try {
-        filesToCompact =
-            Files.list(runtimeDirectory)
-                .map(path -> path.getFileName().toString())
-                .filter(path -> path.endsWith(".sst"))
-                .collect(Collectors.toList());
 
-        db.compactFiles(filesToCompact);
-      } catch (final IOException e) {
-        e.printStackTrace();
-      }
+      db.compactFiles();
       final var filesAfterCompact = runtimeDirectory.toFile().listFiles().length;
       LOG.info(
           "ATTEMPTED to compact on startup - file count before compation = {} after compaction = {}",

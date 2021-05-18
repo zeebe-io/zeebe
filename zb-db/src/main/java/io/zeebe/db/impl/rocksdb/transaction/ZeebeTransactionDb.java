@@ -189,7 +189,7 @@ public class ZeebeTransactionDb<ColumnFamilyNames extends Enum<ColumnFamilyNames
   }
 
   @Override
-  public void compactFiles(final List<String> filesToCompact) {
+  public void compactFiles() {
     for (final ColumnFamilyHandle handle : handelToEnumMap.values()) {
       try {
         final var columnFamilyMetadata =
