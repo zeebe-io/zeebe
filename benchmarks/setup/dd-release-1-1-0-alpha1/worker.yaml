@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  labels:
+    app: worker
+spec:
+  selector:
+    matchLabels:
+      app: worker
+  replicas: 12
+  template:
+    metadata:
+      labels:
+        app: worker
+    spec:
+      containers:
+      - name: worker
+        image: gcr.io/zeebe-io/worker:dd-release-1-1-0-alpha1
+        imagePullPolicy: Always
+        env:
+          - name: JAVA_OPTIONS
+            value: >-
+              -Dapp.brokerUrl=dd-release-1-1-0-alpha1-zeebe-gateway:26500
+              -Dzeebe.client.requestTimeout=62000
+              -Dapp.worker.capacity=120
+              -Dapp.worker.pollingDelay=1ms
+              -Dapp.worker.completionDelay=50ms
+              -XX:+HeapDumpOnOutOfMemoryError
+          - name: LOG_LEVEL
+            value: "warn"
+        resources:
+          limits:
+            cpu: 4
+            memory: 2Gi
+          requests:
+            cpu: 1
+            memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: zeebe
+    app.kubernetes.io/instance: dd-release-1-1-0-alpha1
+    app.kubernetes.io/name: zeebe-cluster
+  name: worker
+spec:
+  clusterIP: None
+  ports:
+  - name: http
+    port: 9600
+    protocol: TCP
+    targetPort: 9600
+  publishNotReadyAddresses: true
+  selector:
+    app: worker
+  sessionAffinity: None
+  type: ClusterIP
+status:
+  loadBalancer: {}

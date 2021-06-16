@@ -1,0 +1,29 @@
+# https://medium.com/@hagaibarel/running-curator-as-a-kubernetes-cronjob-19eaab9afd3b
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: curator
+  labels:
+    app: curator
+spec:
+  schedule: "*/15 * * * *" # at every 15th minute
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 120
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - image: bobrik/curator:5.7.6
+            name: curator
+            args: ["--config", "/etc/config/config.yml", "/etc/config/action_file.yml"]
+            volumeMounts:
+            - name: config
+              mountPath: /etc/config
+          volumes:
+          - name: config
+            configMap:
+              name: curator-config
+          restartPolicy: OnFailure

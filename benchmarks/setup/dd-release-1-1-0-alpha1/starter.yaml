@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: starter
+  labels:
+    app: starter
+spec:
+  selector:
+    matchLabels:
+      app: starter
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: starter
+    spec:
+      containers:
+      - name: starter
+        image: gcr.io/zeebe-io/starter:dd-release-1-1-0-alpha1
+        imagePullPolicy: Always
+        env:
+          - name: JAVA_OPTIONS
+            value: >-
+              -Dapp.brokerUrl=dd-release-1-1-0-alpha1-zeebe-gateway:26500
+              -Dapp.starter.rate=200
+              -Dapp.starter.durationLimit=0
+              -Dzeebe.client.requestTimeout=62000
+              -XX:+HeapDumpOnOutOfMemoryError
+          - name: LOG_LEVEL
+            value: "warn"
+        resources:
+          limits:
+            cpu: 2
+            memory: 2Gi
+          requests:
+            cpu: 2
+            memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: zeebe
+    app.kubernetes.io/instance: dd-release-1-1-0-alpha1
+    app.kubernetes.io/name: zeebe-cluster
+  name: starter
+spec:
+  clusterIP: None
+  ports:
+  - name: http
+    port: 9600
+    protocol: TCP
+    targetPort: 9600
+  publishNotReadyAddresses: true
+  selector:
+    app: starter
+  sessionAffinity: None
+  type: ClusterIP
+status:
+  loadBalancer: {}
