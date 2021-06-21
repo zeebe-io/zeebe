@@ -122,14 +122,13 @@ public class StreamProcessor extends Actor implements HealthMonitorable {
       healthCheckTick();
       openFuture.complete(null);
 
-      final ReProcessingStateMachine reProcessingStateMachine =
-          new ReProcessingStateMachine(processingContext);
+      final var replayStateMachine = new ReplayStateMachine(processingContext);
 
       // disable writing to the log stream but for reprocessing checks
       processingContext.disableLogStreamWriter();
       processingContext.enableReprocessingStreamWriter();
 
-      recoverFuture = reProcessingStateMachine.startRecover(snapshotPosition);
+      recoverFuture = replayStateMachine.startRecover(snapshotPosition);
 
       actor.runOnCompletion(
           recoverFuture,

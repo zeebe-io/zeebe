@@ -69,8 +69,7 @@ public final class ReplayStateMachine {
   private static final Logger LOG = Loggers.PROCESSOR_LOGGER;
   private static final String ERROR_MESSAGE_ON_EVENT_FAILED_SKIP_EVENT =
       "Expected to find event processor for event '{} {}', but caught an exception. Skip this event.";
-  private static final String LOG_STMT_REPROCESSING_FINISHED =
-      "Processor finished reprocessing at event position {}";
+  private static final String LOG_STMT_REPROCESSING_FINISHED = "Processor finished replay.";
   private static final String LOG_STMT_FAILED_ON_PROCESSING =
       "Event {} failed on processing last time, will call #onError to update process instance blacklist.";
 
@@ -135,6 +134,7 @@ public final class ReplayStateMachine {
     replayFuture = new CompletableActorFuture<>();
 
     this.snapshotPosition = snapshotPosition;
+    lastSourceRecordPosition = snapshotPosition;
 
     // idea:
     // no longer need for scanning the log
@@ -142,12 +142,13 @@ public final class ReplayStateMachine {
 
     if (snapshotPosition > 0) {
       LOG.info("Replay starts in mode {}", replayMode);
-      lastSourceRecordPosition = snapshotPosition;
       logStreamReader.seekToNextEvent(snapshotPosition);
-      replayNextEvent();
-    } else {
-      replayFuture.complete(StreamProcessor.UNSET_POSITION);
     }
+
+    replayNextEvent();
+    //    } else {
+    //      replayFuture.complete(StreamProcessor.UNSET_POSITION);
+    //    }
 
     return replayFuture;
   }
@@ -160,7 +161,7 @@ public final class ReplayStateMachine {
           // todo: handle - register for commit to replay next
         } else {
           // Done; complete replay future to continue with leader processing
-          LOG.info(LOG_STMT_REPROCESSING_FINISHED, currentEvent.getPosition());
+          LOG.info(LOG_STMT_REPROCESSING_FINISHED);
 
           // TODO: think about it more. Fill the last source event position again.
           // reset the position to the first event where the processing should start
