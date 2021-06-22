@@ -1,0 +1,133 @@
+image:
+  repository: camunda/zeebe
+  tag: 1.0.1
+  pullPolicy: Always
+
+# ZEEBE CFG
+clusterSize: 3
+partitionCount: 3
+replicationFactor: 3
+cpuThreadCount: 4
+ioThreadCount: 4
+gatewayMetrics: true
+
+podSecurityContext:
+  capabilities:
+        add: ["NET_ADMIN"]
+
+gateway:
+  replicas: 1
+  logLevel: debug
+  env:
+    - name: ZEEBE_LOG_APPENDER
+      value: Stackdriver
+    - name: ZEEBE_LOG_STACKDRIVER_SERVICENAME
+      value: zeebe-gateway
+    - name: ZEEBE_LOG_STACKDRIVER_SERVICEVERSION
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.namespace
+    - name: ATOMIX_LOG_LEVEL
+      value: INFO
+    - name: ZEEBE_LOG_LEVEL
+      value: DEBUG
+    - name: ZEEBE_GATEWAY_MONITORING_ENABLED
+      value: "true"
+    - name: ZEEBE_GATEWAY_THREADS_MANAGEMENTTHREADS
+      value: "4"
+  resources:
+    limits:
+      cpu: 2
+      memory: 2Gi
+    requests:
+      cpu: 2
+      memory: 1Gi
+
+# Uncomment to add custom YAML configuration
+# This will overwrite anything at the application.yml location
+# zeebeCfg: {}
+
+# JavaOpts:
+# DEFAULTS
+JavaOpts: >-
+  -XX:MaxRAMPercentage=25.0
+  -XX:+ExitOnOutOfMemoryError
+  -XX:+HeapDumpOnOutOfMemoryError
+  -XX:HeapDumpPath=/usr/local/zeebe/data
+  -XX:ErrorFile=/usr/local/zeebe/data/zeebe_error%p.log
+  -Xlog:gc*:file=/usr/local/zeebe/data/gc.log:time:filecount=7,filesize=8M
+
+# Environment variables
+env:
+  # Enable JSON logging for google cloud stackdriver
+  - name: ZEEBE_LOG_APPENDER
+    value: Stackdriver
+  - name: ZEEBE_LOG_STACKDRIVER_SERVICENAME
+    value: zeebe-broker
+  - name: ZEEBE_LOG_STACKDRIVER_SERVICEVERSION
+    valueFrom:
+      fieldRef:
+        fieldPath: metadata.namespace
+  # Avoid tons of noise when exporting larger payloads
+  - name: ZEEBE_BROKER_EXECUTION_METRICS_EXPORTER_ENABLED
+    value: "true"
+  - name: ATOMIX_LOG_LEVEL
+    value: INFO
+  - name: ZEEBE_LOG_LEVEL
+    value: DEBUG
+  - name: ZEEBE_BROKER_DATA_DISKUSAGECOMMANDWATERMARK
+    value: "0.8"
+  - name: ZEEBE_BROKER_DATA_DISKUSAGEREPLICATIONWATERMARK
+    value: "0.9"
+
+# RESOURCES
+resources:
+  limits:
+    cpu: 5
+    memory: 12Gi
+  requests:
+    cpu: 5
+    memory: 12Gi
+
+# PVC
+pvcAccessMode: ["ReadWriteOnce"]
+pvcSize: 128Gi
+pvcStorageClassName: ssd
+
+
+# ELASTIC
+elasticsearch:
+  enabled: true
+  imageTag: 7.12.0
+
+  replicas: 3
+  minimumMasterNodes: 2
+
+  volumeClaimTemplate:
+    accessModes: [ "ReadWriteOnce" ]
+    storageClassName: "ssd"
+    resources:
+      requests:
+        storage: 50Gi
+
+  esJavaOpts: "-Xmx4g -Xms4g"
+
+  resources:
+    requests:
+      cpu: 3
+      memory: 8Gi
+    limits:
+      cpu: 3
+      memory: 8Gi
+
+# KIBANA
+kibana:
+  enabled: false
+
+# PROMETHEUS
+prometheus:
+  enabled: false
+
+  servicemonitor:
+    enabled: true
+
