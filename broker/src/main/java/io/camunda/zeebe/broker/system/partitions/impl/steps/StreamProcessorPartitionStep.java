@@ -62,6 +62,10 @@ public class StreamProcessorPartitionStep implements PartitionStep {
 
   @Override
   public ActorFuture<Void> close(final PartitionContext context) {
+    if (context.getStreamProcessor() == null) {
+      return CompletableActorFuture.completed(null);
+    }
+
     context.getComponentHealthMonitor().removeComponent(context.getStreamProcessor().getName());
     final ActorFuture<Void> future = context.getStreamProcessor().closeAsync();
     context.setStreamProcessor(null);

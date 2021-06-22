@@ -187,7 +187,7 @@ public final class ZeebePartition extends Actor
             onRoleChange(context.getRaftPartition().getRole(), context.getRaftPartition().term());
           } else {
             // todo maybe to something else?!
-            actor.fail();
+            actor.close();
           }
         });
   }

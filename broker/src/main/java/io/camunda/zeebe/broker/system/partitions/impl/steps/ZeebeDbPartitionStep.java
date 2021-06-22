@@ -45,7 +45,9 @@ public class ZeebeDbPartitionStep implements PartitionStep {
   @Override
   public ActorFuture<Void> close(final PartitionContext context) {
     // ZeebeDb is closed in the StateController's close()
-    context.setZeebeDb(null);
+    // TODO: currently we dont want to set the zeebe db to null - so we can use it for switch from
+    // FOLLOWER TO LEADER
+    //    context.setZeebeDb(null);
     return CompletableActorFuture.completed(null);
   }
 
