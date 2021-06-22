@@ -110,6 +110,7 @@ public final class ReplayStateMachine {
   private final ReplayContext replayContext;
   private final int partitionId;
   private final MutableZeebeState zeebeState;
+  private long lastEventPosition = -1;
 
   public ReplayStateMachine(final ProcessingContext context) {
     actor = context.getActor();
@@ -167,8 +168,8 @@ public final class ReplayStateMachine {
           // Done; complete replay future to continue with leader processing
           LOG.info(LOG_STMT_REPROCESSING_FINISHED);
 
-          // TODO: think about it more. Fill the last source event position again.
-          // reset the position to the first event where the processing should start
+          // TODO: think about it more. Fill the last source event currentEventPosition again.
+          // reset the currentEventPosition to the first event where the processing should start
           logStreamReader.seekToNextEvent(lastSourceRecordPosition);
 
           onRecovered(lastSourceRecordPosition);
@@ -177,6 +178,24 @@ public final class ReplayStateMachine {
       }
 
       currentEvent = logStreamReader.next();
+      final var currentEventPosition = currentEvent.getPosition();
+      if (lastEventPosition < currentEventPosition) {
+        lastEventPosition = currentEventPosition;
+      } else {
+        replayContext.metadata.reset();
+        currentEvent.readMetadata(replayContext.metadata);
+        final var errorMsg =
+            String.format(
+                "Expected that current event position %d is larger then last event position %d, was not.",
+                currentEventPosition, lastEventPosition);
+
+        replayFuture.completeExceptionally(
+            new ProcessingException(
+                "Inconsistent log detected!",
+                currentEvent,
+                replayContext.metadata,
+                new IllegalStateException(errorMsg)));
+      }
 
       if (eventFilter.applies(currentEvent)) {
         setReplayContext();
@@ -184,9 +203,7 @@ public final class ReplayStateMachine {
         replayUntilDone(replayContext);
       } else {
         markAsProcessed(
-            currentEvent.getPosition(),
-            currentEvent.getSourceEventPosition(),
-            currentEvent.getKey());
+            currentEventPosition, currentEvent.getSourceEventPosition(), currentEvent.getKey());
         actor.submit(this::replayNextEvent);
       }
 
