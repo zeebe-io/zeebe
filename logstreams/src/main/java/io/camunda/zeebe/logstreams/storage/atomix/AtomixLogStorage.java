@@ -10,6 +10,8 @@ package io.camunda.zeebe.logstreams.storage.atomix;
 import io.atomix.raft.zeebe.ZeebeLogAppender;
 import io.camunda.zeebe.logstreams.storage.LogStorage;
 import java.nio.ByteBuffer;
+import java.util.Optional;
+import java.util.function.Supplier;
 
 /**
  * Implementation of {@link LogStorage} for the Atomix {@link io.atomix.raft.storage.log.RaftLog}.
@@ -21,17 +23,19 @@ import java.nio.ByteBuffer;
 public class AtomixLogStorage implements LogStorage {
 
   private final AtomixReaderFactory readerFactory;
-  private final ZeebeLogAppender logAppender;
+  private final Supplier<Optional<ZeebeLogAppender>> logAppenderSupplier;
 
   public AtomixLogStorage(
-      final AtomixReaderFactory readerFactory, final ZeebeLogAppender logAppender) {
+      final AtomixReaderFactory readerFactory,
+      final Supplier<Optional<ZeebeLogAppender>> logAppenderSupplier) {
     this.readerFactory = readerFactory;
-    this.logAppender = logAppender;
+    this.logAppenderSupplier = logAppenderSupplier;
   }
 
   public static AtomixLogStorage ofPartition(
-      final AtomixReaderFactory readerFactory, final ZeebeLogAppender appender) {
-    return new AtomixLogStorage(readerFactory, appender);
+      final AtomixReaderFactory readerFactory,
+      final Supplier<Optional<ZeebeLogAppender>> appenderSupplier) {
+    return new AtomixLogStorage(readerFactory, appenderSupplier);
   }
 
   @Override
@@ -46,6 +50,7 @@ public class AtomixLogStorage implements LogStorage {
       final ByteBuffer buffer,
       final AppendListener listener) {
     final var adapter = new AtomixAppendListenerAdapter(listener);
-    logAppender.appendEntry(lowestPosition, highestPosition, buffer, adapter);
+    final var zeebeLogAppender = logAppenderSupplier.get().orElseThrow();
+    zeebeLogAppender.appendEntry(lowestPosition, highestPosition, buffer, adapter);
   }
 }

@@ -17,6 +17,7 @@ import io.atomix.raft.zeebe.ZeebeLogAppender;
 import io.camunda.zeebe.logstreams.storage.LogStorage.AppendListener;
 import java.io.File;
 import java.nio.ByteBuffer;
+import java.util.Optional;
 import org.agrona.CloseHelper;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
@@ -35,7 +36,7 @@ final class AtomixLogStorageReaderTest {
   void beforeEach(final @TempDir File tempDir) {
     log = RaftLog.builder().withDirectory(tempDir).build();
     final Appender appender = new Appender();
-    logStorage = new AtomixLogStorage(log::openReader, appender);
+    logStorage = new AtomixLogStorage(log::openReader, () -> Optional.of(appender));
     reader = logStorage.newReader();
   }
 
