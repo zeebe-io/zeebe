@@ -22,30 +22,10 @@ public class AtomixLogStoragePartitionStep implements PartitionStep {
     final var openFuture = new CompletableActorFuture<Void>();
     final var server = context.getRaftPartition().getServer();
 
-    //    final var appenderOptional = server.getAppender();
-    //    appenderOptional.ifPresentOrElse(
-    //        logAppender -> {
-    final var raftTerm = server.getTerm();
-
-    if (raftTerm != context.getCurrentTerm()) {
-      openFuture.completeExceptionally(
-          new IllegalStateException(
-              String.format(
-                  WRONG_TERM_ERROR_MSG,
-                  context.getCurrentTerm(),
-                  raftTerm,
-                  context.getPartitionId())));
-    } else {
-      context.setAtomixLogStorage(
-          AtomixLogStorage.ofPartition(
-              server::openReader, () -> context.getRaftPartition().getServer().getAppender()));
-      openFuture.complete(null);
-    }
-    //        },
-    //        () ->
-    //            openFuture.completeExceptionally(
-    //                new IllegalStateException("Not leader of partition " +
-    // context.getPartitionId())));
+    context.setAtomixLogStorage(
+        AtomixLogStorage.ofPartition(
+            server::openReader, () -> context.getRaftPartition().getServer().getAppender()));
+    openFuture.complete(null);
 
     return openFuture;
   }
