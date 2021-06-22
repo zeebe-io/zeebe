@@ -111,8 +111,10 @@ public final class ReplayStateMachine {
   private final int partitionId;
   private final MutableZeebeState zeebeState;
   private long lastEventPosition = -1;
+  private final BooleanSupplier shouldProcessNext;
 
-  public ReplayStateMachine(final ProcessingContext context) {
+  public ReplayStateMachine(
+      final ProcessingContext context, final BooleanSupplier shouldProcessNext) {
     actor = context.getActor();
     logStreamReader = context.getLogStreamReader();
     recordValues = context.getRecordValues();
@@ -127,6 +129,7 @@ public final class ReplayStateMachine {
     replayMode = context.getReplayMode();
     partitionId = context.getLogStream().getPartitionId();
     replayContext = new ReplayContext(new TypedEventImpl(partitionId));
+    this.shouldProcessNext = shouldProcessNext;
   }
 
   /**
@@ -153,6 +156,10 @@ public final class ReplayStateMachine {
 
   void replayNextEvent() {
     try {
+
+      if (!shouldProcessNext.getAsBoolean()) {
+        return;
+      }
 
       if (!logStreamReader.hasNext()) {
         if (replayMode == ReplayMode.UNTIL_END) {

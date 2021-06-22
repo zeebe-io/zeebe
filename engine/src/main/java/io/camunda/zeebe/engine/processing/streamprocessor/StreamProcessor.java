@@ -73,6 +73,8 @@ public class StreamProcessor extends Actor implements HealthMonitorable {
   /** Recover future is completed after reprocessing is done. */
   private ActorFuture<Long> recoverFuture;
 
+  private ReplayStateMachine replayStateMachine;
+
   protected StreamProcessor(final StreamProcessorBuilder processorBuilder) {
     actorScheduler = processorBuilder.getActorScheduler();
     lifecycleAwareListeners = processorBuilder.getLifecycleListeners();
@@ -122,7 +124,7 @@ public class StreamProcessor extends Actor implements HealthMonitorable {
       healthCheckTick();
       openFuture.complete(null);
 
-      final var replayStateMachine = new ReplayStateMachine(processingContext);
+      replayStateMachine = new ReplayStateMachine(processingContext, this::shouldProcessNext);
       if (processingContext.shouldReplayContinuously()) {
         onCommitPositionUpdatedCondition =
             actor.onCondition(
@@ -396,7 +398,17 @@ public class StreamProcessor extends Actor implements HealthMonitorable {
 
   public void resumeProcessing() {
     actor.call(
-        () ->
+        () -> {
+          if (shouldProcess) {
+            return;
+          }
+
+          shouldProcess = true;
+          phase = Phase.PROCESSING;
+          if (recoverFuture == null) {
+            // replay mode
+            actor.submit(replayStateMachine::replayNextEvent);
+          } else {
             recoverFuture.onComplete(
                 (v, t) -> {
                   if (!shouldProcess) {
@@ -406,7 +418,9 @@ public class StreamProcessor extends Actor implements HealthMonitorable {
                     actor.submit(processingStateMachine::readNextEvent);
                     LOG.debug("Resumed processing for partition {}", partitionId);
                   }
-                }));
+                });
+          }
+        });
   }
 
   public enum Phase {
