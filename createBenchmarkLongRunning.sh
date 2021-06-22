@@ -56,4 +56,4 @@ sed_inplace "s/starter:SNAPSHOT/starter:$benchmark/" simpleStarter.yaml
 sed_inplace "s/starter:SNAPSHOT/starter:$benchmark/" timer.yaml
 sed_inplace "s/worker:SNAPSHOT/worker:$benchmark/" worker.yaml
 
-# make zeebe starter worker
+make zeebe starter worker
