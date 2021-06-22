@@ -94,15 +94,18 @@ public final class Broker implements AutoCloseable {
   private static final List<PartitionStep> BOOTSTRAP_STEPS =
       List.of(
           new AtomixLogStoragePartitionStep(),
-          new LogStreamPartitionStep(),
           new RaftLogReaderPartitionStep(),
           new LogDeletionPartitionStep(),
           new StateControllerPartitionStep(),
-          new ZeebeDbPartitionStep());
+          new ZeebeDbPartitionStep(),
+          new LogStreamPartitionStep() // this is just an abstraction around the real journal
+          );
 
   private static final List<PartitionStep> LEADER_STEPS =
       List.of(
-          // TODO: reset dispatcher
+          new LogStreamPartitionStep(), // for simplicity; we just recreate the logstream to reset
+          // dispatcher and stuff - ideally we should close the old
+          // one
           new StreamProcessorPartitionStep(),
           new SnapshotDirectorPartitionStep(),
           new RocksDbMetricExporterPartitionStep(),

@@ -18,6 +18,14 @@ public class LogStreamPartitionStep implements PartitionStep {
   @Override
   public ActorFuture<Void> open(final PartitionContext context) {
     final CompletableActorFuture<Void> openFuture = new CompletableActorFuture<>();
+
+    final var oldStream = context.getLogStream();
+
+    if (oldStream != null) {
+      // we just try to close; if an exception happens we want to continue
+      oldStream.closeAsync();
+    }
+
     buildLogstream(context)
         .onComplete(
             ((logStream, err) -> {
