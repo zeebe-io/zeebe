@@ -68,6 +68,11 @@ public final class ProcessingContext implements ReadonlyProcessingContext {
     return this;
   }
 
+  public ProcessingContext replayMode(final ReplayMode replayMode) {
+    this.replayMode = replayMode;
+    return this;
+  }
+
   public ProcessingContext logStream(final LogStream logStream) {
     this.logStream = logStream;
     return this;

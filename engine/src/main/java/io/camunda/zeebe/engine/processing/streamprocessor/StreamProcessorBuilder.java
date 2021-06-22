@@ -8,6 +8,7 @@
 package io.camunda.zeebe.engine.processing.streamprocessor;
 
 import io.camunda.zeebe.db.ZeebeDb;
+import io.camunda.zeebe.engine.processing.streamprocessor.ReplayStateMachine.ReplayMode;
 import io.camunda.zeebe.engine.processing.streamprocessor.writers.CommandResponseWriter;
 import io.camunda.zeebe.engine.state.EventApplier;
 import io.camunda.zeebe.engine.state.mutable.MutableZeebeState;
@@ -45,6 +46,11 @@ public final class StreamProcessorBuilder {
   }
 
   public StreamProcessorBuilder replayContinuously() {
+    processingContext.replayContinuously();
+    return this;
+  }
+
+  public StreamProcessorBuilder replayMode(final ReplayMode replayMode) {
     processingContext.replayContinuously();
     return this;
   }

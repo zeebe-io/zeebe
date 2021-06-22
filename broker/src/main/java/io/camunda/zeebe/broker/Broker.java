@@ -65,6 +65,7 @@ import io.camunda.zeebe.broker.transport.commandapi.CommandApiService;
 import io.camunda.zeebe.engine.processing.EngineProcessors;
 import io.camunda.zeebe.engine.processing.message.command.SubscriptionCommandSender;
 import io.camunda.zeebe.engine.processing.streamprocessor.ProcessingContext;
+import io.camunda.zeebe.engine.processing.streamprocessor.ReplayStateMachine.ReplayMode;
 import io.camunda.zeebe.engine.state.mutable.MutableZeebeState;
 import io.camunda.zeebe.logstreams.log.LogStream;
 import io.camunda.zeebe.protocol.impl.encoding.BrokerInfo;
@@ -116,7 +117,7 @@ public final class Broker implements AutoCloseable {
           // Leader-To-Follower, on bootstrap we would do it twice now,
           // but this makes it still simpler to implement we dont want
           // to do it from Follower-To-Leader switch
-          new StreamProcessorPartitionStep(),
+          new StreamProcessorPartitionStep(ReplayMode.CONTINUOUSLY),
           new SnapshotDirectorPartitionStep(),
           new RocksDbMetricExporterPartitionStep());
 

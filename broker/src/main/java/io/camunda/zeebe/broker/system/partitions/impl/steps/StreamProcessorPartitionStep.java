@@ -9,6 +9,7 @@ package io.camunda.zeebe.broker.system.partitions.impl.steps;
 
 import io.camunda.zeebe.broker.system.partitions.PartitionContext;
 import io.camunda.zeebe.broker.system.partitions.PartitionStep;
+import io.camunda.zeebe.engine.processing.streamprocessor.ReplayStateMachine.ReplayMode;
 import io.camunda.zeebe.engine.processing.streamprocessor.StreamProcessor;
 import io.camunda.zeebe.engine.state.appliers.EventAppliers;
 import io.camunda.zeebe.engine.state.mutable.MutableZeebeState;
@@ -17,6 +18,16 @@ import io.camunda.zeebe.util.sched.future.ActorFuture;
 import io.camunda.zeebe.util.sched.future.CompletableActorFuture;
 
 public class StreamProcessorPartitionStep implements PartitionStep {
+
+  private final ReplayMode replayMode;
+
+  public StreamProcessorPartitionStep(final ReplayMode replayMode) {
+    this.replayMode = replayMode;
+  }
+
+  public StreamProcessorPartitionStep() {
+    this(ReplayMode.UNTIL_END);
+  }
 
   @Override
   public ActorFuture<Void> open(final PartitionContext context) {
@@ -69,6 +80,7 @@ public class StreamProcessorPartitionStep implements PartitionStep {
         .zeebeDb(state.getZeebeDb())
         .eventApplierFactory(EventAppliers::new)
         .nodeId(state.getNodeId())
+        .replayMode(replayMode)
         .commandResponseWriter(state.getCommandApiService().newCommandResponseWriter())
         .onProcessedListener(
             state.getCommandApiService().getOnProcessedListener(state.getPartitionId()))
