@@ -211,12 +211,28 @@ public final class ZeebePartition extends Actor
     transitionToInactive()
         .onComplete(
             (nothing, err) -> {
-              context.getRaftPartition().removeRoleChangeListener(this);
+              LOG.debug(
+                  "Closing {} bootstrap steps for partition {}",
+                  bootstrapSteps.size(),
+                  getPartitionId());
+              final var partitionSteps = new ArrayList<PartitionStep>(bootstrapSteps);
+              Collections.reverse(partitionSteps);
+              final var future = new CompletableActorFuture<Void>();
+              closeBootstrapSteps(future, partitionSteps);
 
-              context
-                  .getComponentHealthMonitor()
-                  .removeComponent(context.getRaftPartition().name());
-              closeFuture.complete(null);
+              future.onComplete(
+                  (v, e) -> {
+                    LOG.debug(
+                        "Closed {} bootstrap steps for partition {}",
+                        bootstrapSteps.size(),
+                        getPartitionId());
+                    context.getRaftPartition().removeRoleChangeListener(this);
+
+                    context
+                        .getComponentHealthMonitor()
+                        .removeComponent(context.getRaftPartition().name());
+                    closeFuture.complete(null);
+                  });
             });
   }
 
@@ -238,15 +254,7 @@ public final class ZeebePartition extends Actor
         () ->
             // allows to await current transition to avoid concurrent modifications and
             // transitioning
-            currentTransitionFuture.onComplete(
-                (nothing, err) -> {
-                  final var partitionSteps = new ArrayList<PartitionStep>(bootstrapSteps);
-                  Collections.reverse(partitionSteps);
-                  final var future = new CompletableActorFuture<Void>();
-                  closeBootstrapSteps(future, partitionSteps);
-
-                  future.onComplete((v, e) -> super.closeAsync());
-                }));
+            currentTransitionFuture.onComplete((nothing, err) -> super.closeAsync()));
 
     return closeFuture;
   }
