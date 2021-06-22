@@ -45,9 +45,14 @@ public final class ZeebePartition extends Actor
   private final PartitionTransition transition;
   private CompletableActorFuture<Void> closeFuture;
   private ActorFuture<Void> currentTransitionFuture;
+  private final List<PartitionStep> bootstrapSteps;
 
-  public ZeebePartition(final PartitionContext context, final PartitionTransition transition) {
+  public ZeebePartition(
+      final PartitionContext context,
+      final List<PartitionStep> bootstrapSteps,
+      final PartitionTransition transition) {
     this.context = context;
+    this.bootstrapSteps = bootstrapSteps;
     this.transition = transition;
 
     context.setActor(actor);
@@ -170,7 +175,20 @@ public final class ZeebePartition extends Actor
   public void onActorStarting() {
     context.getRaftPartition().addRoleChangeListener(this);
     context.getComponentHealthMonitor().addFailureListener(this);
-    onRoleChange(context.getRaftPartition().getRole(), context.getRaftPartition().term());
+
+    // boot strap
+    final var bootstrapFuture = new CompletableActorFuture<Void>();
+    installBootstrapSteps(bootstrapFuture, new ArrayList<>(bootstrapSteps));
+
+    bootstrapFuture.onComplete(
+        (v, e) -> {
+          if (e == null) {
+            onRoleChange(context.getRaftPartition().getRole(), context.getRaftPartition().term());
+          } else {
+            // todo maybe to something else?!
+            actor.fail();
+          }
+        });
   }
 
   @Override
@@ -230,6 +248,35 @@ public final class ZeebePartition extends Actor
     // Most probably exception happened in the middle of installing leader or follower services
     // because this actor is not doing anything else
     onInstallFailure(failure);
+  }
+
+  private void installBootstrapSteps(
+      final CompletableActorFuture<Void> future, final List<PartitionStep> steps) {
+    if (steps.isEmpty()) {
+      LOG.info("Partition {} first bootstrap phase complete!", context.getPartitionId());
+      future.complete(null);
+      return;
+    }
+
+    final PartitionStep step = steps.remove(0);
+    try {
+      step.open(context)
+          .onComplete(
+              (value, err) -> {
+                if (err != null) {
+                  LOG.error("Expected to open step '{}' but failed with", step.getName(), err);
+                  //                  tryCloseStep(step);
+                  future.completeExceptionally(err);
+                } else {
+                  //                  openedSteps.add(step);
+                  installBootstrapSteps(future, steps);
+                }
+              });
+    } catch (final Exception e) {
+      LOG.error("Expected to open step '{}' but failed with", step.getName(), e);
+      //      tryCloseStep(step);
+      future.completeExceptionally(e);
+    }
   }
 
   @Override

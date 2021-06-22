@@ -62,7 +62,7 @@ public class ZeebePartitionTest {
   @Test
   public void shouldInstallLeaderPartition() {
     // given
-    final ZeebePartition partition = new ZeebePartition(ctx, transition);
+    final ZeebePartition partition = new ZeebePartition(ctx, BOOTSTRAP_STEPS, transition);
     schedulerRule.submitActor(partition);
 
     // when
@@ -77,7 +77,7 @@ public class ZeebePartitionTest {
   public void shouldCallOnFailureOnAddFailureListenerAndUnhealthy() {
     // given
     when(healthMonitor.getHealthStatus()).thenReturn(HealthStatus.UNHEALTHY);
-    final ZeebePartition partition = new ZeebePartition(ctx, transition);
+    final ZeebePartition partition = new ZeebePartition(ctx, BOOTSTRAP_STEPS, transition);
     final FailureListener failureListener = mock(FailureListener.class);
     doNothing().when(failureListener).onFailure();
     schedulerRule.submitActor(partition);
@@ -93,7 +93,7 @@ public class ZeebePartitionTest {
   @Test
   public void shouldCallOnRecoveredOnAddFailureListenerAndHealthy() {
     // given
-    final ZeebePartition partition = new ZeebePartition(ctx, transition);
+    final ZeebePartition partition = new ZeebePartition(ctx, BOOTSTRAP_STEPS, transition);
     final FailureListener failureListener = mock(FailureListener.class);
     doNothing().when(failureListener).onRecovered();
 
@@ -113,7 +113,7 @@ public class ZeebePartitionTest {
   @Test
   public void shouldStepDownAfterFailedLeaderTransition() throws InterruptedException {
     // given
-    final ZeebePartition partition = new ZeebePartition(ctx, transition);
+    final ZeebePartition partition = new ZeebePartition(ctx, BOOTSTRAP_STEPS, transition);
     final CountDownLatch latch = new CountDownLatch(1);
 
     when(transition.toLeader(anyLong()))
@@ -151,7 +151,7 @@ public class ZeebePartitionTest {
   @Test
   public void shouldGoInactiveAfterFailedFollowerTransition() throws InterruptedException {
     // given
-    final ZeebePartition partition = new ZeebePartition(ctx, transition);
+    final ZeebePartition partition = new ZeebePartition(ctx, BOOTSTRAP_STEPS, transition);
     final CountDownLatch latch = new CountDownLatch(1);
 
     when(transition.toFollower(anyLong()))
@@ -186,7 +186,7 @@ public class ZeebePartitionTest {
   @Test
   public void shouldGoInactiveIfTransitionHasUnrecoverableFailure() throws InterruptedException {
     // given
-    final ZeebePartition partition = new ZeebePartition(ctx, transition);
+    final ZeebePartition partition = new ZeebePartition(ctx, BOOTSTRAP_STEPS, transition);
     final CountDownLatch latch = new CountDownLatch(1);
     when(transition.toLeader(anyLong()))
         .thenReturn(

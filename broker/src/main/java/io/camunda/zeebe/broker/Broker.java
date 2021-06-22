@@ -52,14 +52,11 @@ import io.camunda.zeebe.broker.system.partitions.impl.PartitionProcessingState;
 import io.camunda.zeebe.broker.system.partitions.impl.PartitionTransitionImpl;
 import io.camunda.zeebe.broker.system.partitions.impl.steps.AtomixLogStoragePartitionStep;
 import io.camunda.zeebe.broker.system.partitions.impl.steps.ExporterDirectorPartitionStep;
-import io.camunda.zeebe.broker.system.partitions.impl.steps.FollowerPostStoragePartitionStep;
-import io.camunda.zeebe.broker.system.partitions.impl.steps.LeaderPostStoragePartitionStep;
 import io.camunda.zeebe.broker.system.partitions.impl.steps.LogDeletionPartitionStep;
 import io.camunda.zeebe.broker.system.partitions.impl.steps.LogStreamPartitionStep;
 import io.camunda.zeebe.broker.system.partitions.impl.steps.RaftLogReaderPartitionStep;
 import io.camunda.zeebe.broker.system.partitions.impl.steps.RocksDbMetricExporterPartitionStep;
 import io.camunda.zeebe.broker.system.partitions.impl.steps.SnapshotDirectorPartitionStep;
-import io.camunda.zeebe.broker.system.partitions.impl.steps.SnapshotReplicationPartitionStep;
 import io.camunda.zeebe.broker.system.partitions.impl.steps.StateControllerPartitionStep;
 import io.camunda.zeebe.broker.system.partitions.impl.steps.StreamProcessorPartitionStep;
 import io.camunda.zeebe.broker.system.partitions.impl.steps.ZeebeDbPartitionStep;
@@ -93,27 +90,33 @@ import org.slf4j.Logger;
 public final class Broker implements AutoCloseable {
 
   public static final Logger LOG = Loggers.SYSTEM_LOGGER;
-  private static final List<PartitionStep> LEADER_STEPS =
+
+  private static final List<PartitionStep> BOOTSTRAP_STEPS =
       List.of(
           new AtomixLogStoragePartitionStep(),
           new LogStreamPartitionStep(),
           new RaftLogReaderPartitionStep(),
-          new SnapshotReplicationPartitionStep(),
-          new StateControllerPartitionStep(),
           new LogDeletionPartitionStep(),
-          new LeaderPostStoragePartitionStep(),
-          new ZeebeDbPartitionStep(),
+          new StateControllerPartitionStep(),
+          new ZeebeDbPartitionStep());
+
+  private static final List<PartitionStep> LEADER_STEPS =
+      List.of(
+          // TODO: reset dispatcher
           new StreamProcessorPartitionStep(),
           new SnapshotDirectorPartitionStep(),
           new RocksDbMetricExporterPartitionStep(),
           new ExporterDirectorPartitionStep());
   private static final List<PartitionStep> FOLLOWER_STEPS =
       List.of(
-          new RaftLogReaderPartitionStep(),
-          new SnapshotReplicationPartitionStep(),
-          new StateControllerPartitionStep(),
-          new LogDeletionPartitionStep(),
-          new FollowerPostStoragePartitionStep());
+          new ZeebeDbPartitionStep(), // for simplicity; we need to recover the last snapshot from
+          // Leader-To-Follower, on bootstrap we would do it twice now,
+          // but this makes it still simpler to implement we dont want
+          // to do it from Follower-To-Leader switch
+          new StreamProcessorPartitionStep(),
+          new SnapshotDirectorPartitionStep(),
+          new RocksDbMetricExporterPartitionStep());
+
   private final SystemContext brokerContext;
   private final List<PartitionListener> partitionListeners;
   private boolean isClosed = false;
@@ -409,7 +412,8 @@ public final class Broker implements AutoCloseable {
                     new PartitionProcessingState(owningPartition));
             final PartitionTransitionImpl transitionBehavior =
                 new PartitionTransitionImpl(context, LEADER_STEPS, FOLLOWER_STEPS);
-            final ZeebePartition zeebePartition = new ZeebePartition(context, transitionBehavior);
+            final ZeebePartition zeebePartition =
+                new ZeebePartition(context, BOOTSTRAP_STEPS, transitionBehavior);
             scheduleActor(zeebePartition);
             zeebePartition.addFailureListener(
                 new PartitionHealthBroadcaster(partitionId, topologyManager::onHealthChanged));
