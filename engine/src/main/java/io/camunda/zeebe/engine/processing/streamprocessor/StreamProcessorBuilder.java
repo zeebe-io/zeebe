@@ -51,7 +51,7 @@ public final class StreamProcessorBuilder {
   }
 
   public StreamProcessorBuilder replayMode(final ReplayMode replayMode) {
-    processingContext.replayContinuously();
+    processingContext.replayMode(replayMode);
     return this;
   }
 
