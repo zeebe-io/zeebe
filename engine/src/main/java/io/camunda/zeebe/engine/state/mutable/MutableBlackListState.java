@@ -15,4 +15,6 @@ public interface MutableBlackListState extends BlackListState {
 
   boolean tryToBlacklist(
       final TypedRecord<?> typedRecord, final Consumer<Long> onBlacklistingInstance);
+
+  void blacklistProcessInstance(final long processInstanceKey);
 }

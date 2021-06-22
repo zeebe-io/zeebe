@@ -88,6 +88,11 @@ public final class DbBlackListState implements MutableBlackListState {
     return false;
   }
 
+  @Override
+  public void blacklistProcessInstance(final long processInstanceKey) {
+    blacklist(processInstanceKey);
+  }
+
   private boolean shouldBeBlacklisted(final Intent intent) {
 
     if (intent instanceof ProcessInstanceRelatedIntent) {
