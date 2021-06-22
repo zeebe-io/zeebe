@@ -17,6 +17,7 @@ import io.camunda.zeebe.engine.state.mutable.MutableZeebeState;
 import io.camunda.zeebe.logstreams.impl.Loggers;
 import io.camunda.zeebe.logstreams.log.LogStreamReader;
 import io.camunda.zeebe.logstreams.log.LoggedEvent;
+import io.camunda.zeebe.protocol.Protocol;
 import io.camunda.zeebe.protocol.impl.record.RecordMetadata;
 import io.camunda.zeebe.protocol.impl.record.UnifiedRecordValue;
 import io.camunda.zeebe.protocol.impl.record.value.error.ErrorRecord;
@@ -243,10 +244,12 @@ public final class ReplayStateMachine {
             lastFollowUpEventPosition = Math.max(recordPosition, lastFollowUpEventPosition);
             lastSourceRecordPosition = Math.max(sourceRecordPosition, lastSourceRecordPosition);
 
-            if (currentTypedEvent.getPartitionId() == partitionId) {
+            final var key = currentTypedEvent.getKey();
+            // ignore keys, which came from other partitions
+            if (Protocol.decodePartitionId(key) == partitionId) {
 
               // remember the highest key on the stream to restore the key generator after replay
-              highestRecordKey = Math.max(currentTypedEvent.getKey(), highestRecordKey);
+              highestRecordKey = Math.max(key, highestRecordKey);
             }
           };
     }
