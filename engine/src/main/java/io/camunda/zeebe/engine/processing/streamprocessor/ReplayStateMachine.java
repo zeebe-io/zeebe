@@ -124,7 +124,7 @@ public final class ReplayStateMachine {
     zeebeState = context.getZeebeState();
     updateStateRetryStrategy = new EndlessRetryStrategy(actor);
     processRetryStrategy = new EndlessRetryStrategy(actor);
-    replayMode = ReplayMode.UNTIL_END;
+    replayMode = context.getReplayMode();
     partitionId = context.getLogStream().getPartitionId();
     replayContext = new ReplayContext(new TypedEventImpl(partitionId));
   }
@@ -141,40 +141,31 @@ public final class ReplayStateMachine {
     this.snapshotPosition = snapshotPosition;
     lastSourceRecordPosition = snapshotPosition;
 
-    // idea:
-    // no longer need for scanning the log
-    // support two modes - one time replay (for leader bootstrapping) or continuously replay
-
     if (snapshotPosition > 0) {
       LOG.info("Replay starts in mode {}", replayMode);
       logStreamReader.seekToNextEvent(snapshotPosition);
     }
 
     replayNextEvent();
-    //    } else {
-    //      replayFuture.complete(StreamProcessor.UNSET_POSITION);
-    //    }
 
     return replayFuture;
   }
 
-  private void replayNextEvent() {
+  void replayNextEvent() {
     try {
 
       if (!logStreamReader.hasNext()) {
-        if (replayMode == ReplayMode.CONTINUOUSLY) {
-          // todo: handle - register for commit to replay next
-        } else {
+        if (replayMode == ReplayMode.UNTIL_END) {
           // Done; complete replay future to continue with leader processing
           LOG.info(LOG_STMT_REPROCESSING_FINISHED);
 
-          // TODO: think about it more. Fill the last source event currentEventPosition again.
           // reset the currentEventPosition to the first event where the processing should start
           logStreamReader.seekToNextEvent(lastSourceRecordPosition);
 
           onRecovered(lastSourceRecordPosition);
-          return;
         }
+        return;
+        // continuously replay mode will cause recall method on next commit
       }
 
       currentEvent = logStreamReader.next();
@@ -182,19 +173,7 @@ public final class ReplayStateMachine {
       if (lastEventPosition < currentEventPosition) {
         lastEventPosition = currentEventPosition;
       } else {
-        replayContext.metadata.reset();
-        currentEvent.readMetadata(replayContext.metadata);
-        final var errorMsg =
-            String.format(
-                "Expected that current event position %d is larger then last event position %d, was not.",
-                currentEventPosition, lastEventPosition);
-
-        replayFuture.completeExceptionally(
-            new ProcessingException(
-                "Inconsistent log detected!",
-                currentEvent,
-                replayContext.metadata,
-                new IllegalStateException(errorMsg)));
+        reportInconsistentLog(currentEventPosition);
       }
 
       if (eventFilter.applies(currentEvent)) {
@@ -213,6 +192,22 @@ public final class ReplayStateMachine {
               "Unable to replay record", currentEvent, replayContext.metadata, e);
       replayFuture.completeExceptionally(processingException);
     }
+  }
+
+  private void reportInconsistentLog(final long currentEventPosition) {
+    replayContext.metadata.reset();
+    currentEvent.readMetadata(replayContext.metadata);
+    final var errorMsg =
+        String.format(
+            "Expected that current event position %d is larger then last event position %d, was not.",
+            currentEventPosition, lastEventPosition);
+
+    replayFuture.completeExceptionally(
+        new ProcessingException(
+            "Inconsistent log detected!",
+            currentEvent,
+            replayContext.metadata,
+            new IllegalStateException(errorMsg)));
   }
 
   /** Sets all necessary information at the context, which is used during replay the event. */

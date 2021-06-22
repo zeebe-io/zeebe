@@ -123,25 +123,30 @@ public class StreamProcessor extends Actor implements HealthMonitorable {
       openFuture.complete(null);
 
       final var replayStateMachine = new ReplayStateMachine(processingContext);
+      if (processingContext.shouldReplayContinuously()) {
+        onCommitPositionUpdatedCondition =
+            actor.onCondition(
+                getName() + "-on-commit-position-updated", replayStateMachine::replayNextEvent);
+        logStream.registerOnCommitPositionUpdatedCondition(onCommitPositionUpdatedCondition);
 
-      // disable writing to the log stream but for reprocessing checks
-      processingContext.disableLogStreamWriter();
-      processingContext.enableReprocessingStreamWriter();
+        replayStateMachine.startRecover(snapshotPosition);
+      } else {
 
-      recoverFuture = replayStateMachine.startRecover(snapshotPosition);
+        recoverFuture = replayStateMachine.startRecover(snapshotPosition);
 
-      actor.runOnCompletion(
-          recoverFuture,
-          (lastReprocessedPosition, throwable) -> {
-            if (throwable != null) {
-              LOG.error("Unexpected error on recovery happens.", throwable);
-              onFailure(throwable);
-            } else {
-              onRecovered(lastReprocessedPosition);
-              new StreamProcessorMetrics(partitionId)
-                  .recoveryTime(System.currentTimeMillis() - startTime);
-            }
-          });
+        actor.runOnCompletion(
+            recoverFuture,
+            (lastReprocessedPosition, throwable) -> {
+              if (throwable != null) {
+                LOG.error("Unexpected error on recovery happens.", throwable);
+                onFailure(throwable);
+              } else {
+                onRecovered(lastReprocessedPosition);
+                new StreamProcessorMetrics(partitionId)
+                    .recoveryTime(System.currentTimeMillis() - startTime);
+              }
+            });
+      }
     } catch (final RuntimeException e) {
       onFailure(e);
     }

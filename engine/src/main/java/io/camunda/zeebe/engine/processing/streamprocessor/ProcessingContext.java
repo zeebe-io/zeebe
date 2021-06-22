@@ -9,6 +9,7 @@ package io.camunda.zeebe.engine.processing.streamprocessor;
 
 import io.camunda.zeebe.db.TransactionContext;
 import io.camunda.zeebe.engine.processing.bpmn.behavior.TypedStreamWriterProxy;
+import io.camunda.zeebe.engine.processing.streamprocessor.ReplayStateMachine.ReplayMode;
 import io.camunda.zeebe.engine.processing.streamprocessor.writers.CommandResponseWriter;
 import io.camunda.zeebe.engine.processing.streamprocessor.writers.EventApplyingStateWriter;
 import io.camunda.zeebe.engine.processing.streamprocessor.writers.NoopTypedStreamWriter;
@@ -51,6 +52,7 @@ public final class ProcessingContext implements ReadonlyProcessingContext {
   private Consumer<TypedRecord> onProcessedListener = record -> {};
   private Consumer<LoggedEvent> onSkippedListener = record -> {};
   private int maxFragmentSize;
+  private ReplayMode replayMode = ReplayMode.UNTIL_END;
 
   public ProcessingContext() {
     streamWriterProxy.wrap(logStreamWriter);
@@ -58,6 +60,11 @@ public final class ProcessingContext implements ReadonlyProcessingContext {
 
   public ProcessingContext actor(final ActorControl actor) {
     this.actor = actor;
+    return this;
+  }
+
+  public ProcessingContext replayContinuously() {
+    replayMode = ReplayMode.CONTINUOUSLY;
     return this;
   }
 
@@ -107,6 +114,14 @@ public final class ProcessingContext implements ReadonlyProcessingContext {
     typedResponseWriter =
         new TypedResponseWriterImpl(commandResponseWriter, getLogStream().getPartitionId());
     return this;
+  }
+
+  public boolean shouldReplayContinuously() {
+    return ReplayMode.CONTINUOUSLY == replayMode;
+  }
+
+  public ReplayMode getReplayMode() {
+    return replayMode;
   }
 
   public CommandResponseWriter getCommandResponseWriter() {

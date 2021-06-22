@@ -44,6 +44,11 @@ public final class StreamProcessorBuilder {
     return this;
   }
 
+  public StreamProcessorBuilder replayContinuously() {
+    processingContext.replayContinuously();
+    return this;
+  }
+
   public StreamProcessorBuilder nodeId(final int nodeId) {
     this.nodeId = nodeId;
     return this;
