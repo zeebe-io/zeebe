@@ -27,6 +27,7 @@ import io.camunda.zeebe.util.health.HealthStatus;
 import io.camunda.zeebe.util.sched.future.ActorFuture;
 import io.camunda.zeebe.util.sched.future.CompletableActorFuture;
 import io.camunda.zeebe.util.sched.testing.ControlledActorSchedulerRule;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -37,8 +38,8 @@ import org.mockito.InOrder;
 
 public class ZeebePartitionTest {
 
+  private static final List<PartitionStep> BOOTSTRAP_STEPS = List.of();
   @Rule public ControlledActorSchedulerRule schedulerRule = new ControlledActorSchedulerRule();
-
   private PartitionContext ctx;
   private PartitionTransition transition;
   private CriticalComponentsHealthMonitor healthMonitor;

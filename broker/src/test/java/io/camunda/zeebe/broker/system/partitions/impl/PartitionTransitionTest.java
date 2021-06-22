@@ -50,10 +50,7 @@ public class PartitionTransitionTest {
     final TestPartitionStep secondComponent = spy(TestPartitionStep.builder().build());
     final PartitionTransitionImpl transition =
         new PartitionTransitionImpl(
-            ctx,
-            BOOTSTRAP_STEPS,
-            List.of(firstComponent, secondComponent),
-            Collections.emptyList());
+            ctx, List.of(firstComponent, secondComponent), Collections.emptyList());
 
     // when
     final Actor actor =
@@ -80,8 +77,7 @@ public class PartitionTransitionTest {
     final TestPartitionStep leaderComponent = spy(TestPartitionStep.builder().build());
     final TestPartitionStep followerComponent = spy(TestPartitionStep.builder().build());
     final PartitionTransitionImpl partitionTransition =
-        new PartitionTransitionImpl(
-            ctx, BOOTSTRAP_STEPS, List.of(leaderComponent), List.of(followerComponent));
+        new PartitionTransitionImpl(ctx, List.of(leaderComponent), List.of(followerComponent));
 
     // when
     final Actor actor =
@@ -108,8 +104,7 @@ public class PartitionTransitionTest {
     final TestPartitionStep succeedStep = spy(TestPartitionStep.builder().build());
     final TestPartitionStep failStep = spy(TestPartitionStep.builder().failOnClose().build());
     final PartitionTransitionImpl transition =
-        new PartitionTransitionImpl(
-            ctx, BOOTSTRAP_STEPS, List.of(succeedStep, failStep), Collections.emptyList());
+        new PartitionTransitionImpl(ctx, List.of(succeedStep, failStep), Collections.emptyList());
 
     // when
     final Actor actor =
@@ -134,8 +129,7 @@ public class PartitionTransitionTest {
     final TestPartitionStep succeedStep = spy(TestPartitionStep.builder().build());
     final TestPartitionStep failStep = spy(TestPartitionStep.builder().failOnOpen().build());
     final PartitionTransitionImpl transition =
-        new PartitionTransitionImpl(
-            ctx, BOOTSTRAP_STEPS, List.of(succeedStep, failStep), Collections.emptyList());
+        new PartitionTransitionImpl(ctx, List.of(succeedStep, failStep), Collections.emptyList());
 
     // when
     final Actor actor =
@@ -164,8 +158,7 @@ public class PartitionTransitionTest {
     final TestPartitionStep failStep = spy(TestPartitionStep.builder().failOnClose().build());
     final TestPartitionStep followerStep = spy(TestPartitionStep.builder().build());
     final PartitionTransitionImpl transition =
-        new PartitionTransitionImpl(
-            ctx, BOOTSTRAP_STEPS, List.of(leaderStep, failStep), List.of(followerStep));
+        new PartitionTransitionImpl(ctx, List.of(leaderStep, failStep), List.of(followerStep));
 
     // when
     final Actor actor =
@@ -198,7 +191,7 @@ public class PartitionTransitionTest {
                 .throwOnOpen(new UnrecoverableException("expected"))
                 .build());
     final PartitionTransitionImpl transition =
-        new PartitionTransitionImpl(ctx, BOOTSTRAP_STEPS, List.of(leaderStep, failStep), List.of());
+        new PartitionTransitionImpl(ctx, List.of(leaderStep, failStep), List.of());
 
     // when
     final Actor actor =
@@ -230,7 +223,7 @@ public class PartitionTransitionTest {
                 .throwOnClose(new UnrecoverableException("expected"))
                 .build());
     final PartitionTransitionImpl transition =
-        new PartitionTransitionImpl(ctx, BOOTSTRAP_STEPS, List.of(leaderStep, failStep), List.of());
+        new PartitionTransitionImpl(ctx, List.of(leaderStep, failStep), List.of());
 
     // when
     final Actor actor =
@@ -262,7 +255,7 @@ public class PartitionTransitionTest {
     final TestPartitionStep leaderStep = spy(TestPartitionStep.builder().build());
 
     final PartitionTransitionImpl transition =
-        new PartitionTransitionImpl(ctx, BOOTSTRAP_STEPS, List.of(leaderStep), List.of());
+        new PartitionTransitionImpl(ctx, List.of(leaderStep), List.of());
 
     // when
     final Actor actor =

@@ -27,6 +27,7 @@ import org.mockito.Mockito;
 
 public class ZeebePartitionTransitionIntegrationTest {
 
+  private static final List<PartitionStep> BOOTSTRAP_STEPS = List.of();
   @Rule public ActorSchedulerRule schedulerRule = new ActorSchedulerRule();
 
   private PartitionContext ctx;
@@ -38,9 +39,7 @@ public class ZeebePartitionTransitionIntegrationTest {
     final TestPartitionStep firstComponent = spy(TestPartitionStep.builder().build());
     final TestPartitionStep secondComponent = spy(TestPartitionStep.builder().build());
     transition =
-        spy(
-            new PartitionTransitionImpl(
-                ctx, BOOTSTRAP_STEPS, List.of(firstComponent), List.of(secondComponent)));
+        spy(new PartitionTransitionImpl(ctx, List.of(firstComponent), List.of(secondComponent)));
 
     final RaftPartition raftPartition = mock(RaftPartition.class);
     when(raftPartition.id()).thenReturn(new PartitionId("", 0));
