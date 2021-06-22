@@ -13,11 +13,13 @@ import io.camunda.zeebe.db.ZeebeDbTransaction;
 import io.camunda.zeebe.engine.state.EventApplier;
 import io.camunda.zeebe.engine.state.KeyGeneratorControls;
 import io.camunda.zeebe.engine.state.mutable.MutableLastProcessedPositionState;
+import io.camunda.zeebe.engine.state.mutable.MutableZeebeState;
 import io.camunda.zeebe.logstreams.impl.Loggers;
 import io.camunda.zeebe.logstreams.log.LogStreamReader;
 import io.camunda.zeebe.logstreams.log.LoggedEvent;
 import io.camunda.zeebe.protocol.impl.record.RecordMetadata;
 import io.camunda.zeebe.protocol.impl.record.UnifiedRecordValue;
+import io.camunda.zeebe.protocol.impl.record.value.error.ErrorRecord;
 import io.camunda.zeebe.protocol.record.RecordType;
 import io.camunda.zeebe.protocol.record.ValueType;
 import io.camunda.zeebe.util.retry.EndlessRetryStrategy;
@@ -106,6 +108,7 @@ public final class ReplayStateMachine {
   private final ReplayMode replayMode;
   private final ReplayContext replayContext;
   private final int partitionId;
+  private final MutableZeebeState zeebeState;
 
   public ReplayStateMachine(final ProcessingContext context) {
     actor = context.getActor();
@@ -116,7 +119,7 @@ public final class ReplayStateMachine {
     eventApplier = context.getEventApplier();
     keyGeneratorControls = context.getKeyGeneratorControls();
     lastProcessedPositionState = context.getLastProcessedPositionState();
-
+    zeebeState = context.getZeebeState();
     updateStateRetryStrategy = new EndlessRetryStrategy(actor);
     processRetryStrategy = new EndlessRetryStrategy(actor);
     replayMode = ReplayMode.UNTIL_END;
@@ -211,10 +214,13 @@ public final class ReplayStateMachine {
     final TransactionOperation operationOnReplay;
     if (currentTypedEvent.getValueType() == ValueType.ERROR) {
       LOG.info(LOG_STMT_FAILED_ON_PROCESSING, currentEvent);
-      // TODO: blacklist via error records - currently not possible
-      operationOnReplay = null;
-      //          () -> zeebeState.getBlackListState().tryToBlacklist(currentEvent,
-      // NOOP_LONG_CONSUMER);
+      operationOnReplay =
+          () -> {
+            final var errorRecord = (ErrorRecord) currentTypedEvent.getValue();
+            zeebeState
+                .getBlackListState()
+                .blacklistProcessInstance(errorRecord.getProcessInstanceKey());
+          };
     } else {
       operationOnReplay =
           () -> {
