@@ -50,6 +50,10 @@ public class LogStreamPartitionStep implements PartitionStep {
 
   @Override
   public ActorFuture<Void> close(final PartitionContext context) {
+    if (context.getLogStream() == null) {
+      return CompletableActorFuture.completed(null);
+    }
+
     context.getComponentHealthMonitor().removeComponent(context.getLogStream().getLogName());
     final ActorFuture<Void> future = context.getLogStream().closeAsync();
     context.setLogStream(null);

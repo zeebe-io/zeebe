@@ -25,6 +25,7 @@ import io.camunda.zeebe.util.sched.future.ActorFuture;
 import io.camunda.zeebe.util.sched.future.CompletableActorFuture;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -237,7 +238,15 @@ public final class ZeebePartition extends Actor
         () ->
             // allows to await current transition to avoid concurrent modifications and
             // transitioning
-            currentTransitionFuture.onComplete((nothing, err) -> super.closeAsync()));
+            currentTransitionFuture.onComplete(
+                (nothing, err) -> {
+                  final var partitionSteps = new ArrayList<PartitionStep>(bootstrapSteps);
+                  Collections.reverse(partitionSteps);
+                  final var future = new CompletableActorFuture<Void>();
+                  closeBootstrapSteps(future, partitionSteps);
+
+                  future.onComplete((v, e) -> super.closeAsync());
+                }));
 
     return closeFuture;
   }
@@ -275,6 +284,32 @@ public final class ZeebePartition extends Actor
     } catch (final Exception e) {
       LOG.error("Expected to open step '{}' but failed with", step.getName(), e);
       //      tryCloseStep(step);
+      future.completeExceptionally(e);
+    }
+  }
+
+  private void closeBootstrapSteps(
+      final CompletableActorFuture<Void> future, final List<PartitionStep> steps) {
+    if (steps.isEmpty()) {
+      LOG.info("Partition {} closing phase complete!", context.getPartitionId());
+      future.complete(null);
+      return;
+    }
+
+    final PartitionStep step = steps.remove(0);
+    try {
+      step.close(context)
+          .onComplete(
+              (value, err) -> {
+                if (err != null) {
+                  LOG.error("Expected to close step '{}' but failed with", step.getName(), err);
+                  // continue
+                } else {
+                  closeBootstrapSteps(future, steps);
+                }
+              });
+    } catch (final Exception e) {
+      LOG.error("Expected to open step '{}' but failed with", step.getName(), e);
       future.completeExceptionally(e);
     }
   }
