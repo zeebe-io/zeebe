@@ -181,8 +181,12 @@ public final class ReplayStateMachine {
       if (eventFilter.applies(currentEvent)) {
         setReplayContext();
 
-        replayUntilDone(currentEvent.getPosition(), replayContext);
+        replayUntilDone(replayContext);
       } else {
+        markAsProcessed(
+            currentEvent.getPosition(),
+            currentEvent.getSourceEventPosition(),
+            currentEvent.getKey());
         actor.submit(this::replayNextEvent);
       }
 
@@ -209,7 +213,7 @@ public final class ReplayStateMachine {
     replayContext.typedEvent.wrap(currentEvent, metadata, value);
   }
 
-  private void replayUntilDone(final long position, final ReplayContext replayContext) {
+  private void replayUntilDone(final ReplayContext replayContext) {
     final var currentTypedEvent = replayContext.typedEvent;
 
     final TransactionOperation operationOnReplay;
@@ -228,29 +232,17 @@ public final class ReplayStateMachine {
             // We only replay events. We don't need to check for blacklisted, since we wouldn't
             // create an event for a blacklisted instances on processing.
 
-            final long recordPosition = currentTypedEvent.getPosition();
+            final var sourceRecordPosition = currentTypedEvent.getSourceRecordPosition();
+            final long recordPosition = currentEvent.getPosition();
+            final var key = currentEvent.getKey();
 
             // skip events if the state changes are already applied to the state in the snapshot
-            final var sourceRecordPosition = currentTypedEvent.getSourceRecordPosition();
             if (sourceRecordPosition > snapshotPosition) {
               eventApplier.applyState(
-                  currentEvent.getKey(),
-                  currentTypedEvent.getIntent(),
-                  currentTypedEvent.getValue());
+                  key, currentTypedEvent.getIntent(), currentTypedEvent.getValue());
             }
 
-            lastProcessedPositionState.markAsProcessed(position);
-
-            lastFollowUpEventPosition = Math.max(recordPosition, lastFollowUpEventPosition);
-            lastSourceRecordPosition = Math.max(sourceRecordPosition, lastSourceRecordPosition);
-
-            final var key = currentTypedEvent.getKey();
-            // ignore keys, which came from other partitions
-            if (Protocol.decodePartitionId(key) == partitionId) {
-
-              // remember the highest key on the stream to restore the key generator after replay
-              highestRecordKey = Math.max(key, highestRecordKey);
-            }
+            markAsProcessed(recordPosition, sourceRecordPosition, key);
           };
     }
 
@@ -274,6 +266,22 @@ public final class ReplayStateMachine {
           assert t == null : "On reprocessing there shouldn't be any exception thrown.";
           updateStateUntilDone();
         });
+  }
+
+  private void markAsProcessed(
+      final long recordPosition, final long sourceRecordPosition, final long key) {
+    lastFollowUpEventPosition = Math.max(recordPosition, lastFollowUpEventPosition);
+
+    if (sourceRecordPosition > 0) {
+      lastProcessedPositionState.markAsProcessed(sourceRecordPosition);
+      lastSourceRecordPosition = Math.max(sourceRecordPosition, lastSourceRecordPosition);
+    }
+
+    // ignore keys, which came from other partitions
+    if (Protocol.decodePartitionId(key) == partitionId) {
+      // remember the highest key on the stream to restore the key generator after replay
+      highestRecordKey = Math.max(key, highestRecordKey);
+    }
   }
 
   private void updateStateUntilDone() {
