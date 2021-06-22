@@ -28,10 +28,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 import org.agrona.concurrent.UnsafeBuffer;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+@Ignore("State on followers will not replicate snapshots")
 public final class FailingSnapshotChunkReplicationTest {
 
   @Rule public final TemporaryFolder tempFolderRule = new TemporaryFolder();

@@ -32,10 +32,12 @@ import java.util.zip.CRC32C;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.awaitility.Awaitility;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+@Ignore("State on followers will not replicate snapshots")
 public final class ReplicateStateControllerTest {
 
   private static final int VALUE = 0xCAFE;
