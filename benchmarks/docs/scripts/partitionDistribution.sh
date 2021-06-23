@@ -38,7 +38,7 @@ public class PartitionDistribution {
     for (int partitionIdx = 0; partitionIdx < partitionCount; partitionIdx++)
     {
 
-      builder.append("\n").append("P ").append(partitionIdx);
+      builder.append("\n").append("P ").append(partitionIdx + 1); // the partition Id is starting with 1
 
       final String[] nodeRoles = new String[nodeCount];
       final int leaderIdx = partitionIdx % nodeCount;
