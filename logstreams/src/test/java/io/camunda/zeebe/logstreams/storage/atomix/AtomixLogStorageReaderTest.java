@@ -36,7 +36,7 @@ final class AtomixLogStorageReaderTest {
   void beforeEach(final @TempDir File tempDir) {
     log = RaftLog.builder().withDirectory(tempDir).build();
     final Appender appender = new Appender();
-    logStorage = new AtomixLogStorage(log::openReader, () -> Optional.of(appender));
+    logStorage = new AtomixLogStorage(log::openReader, () -> Optional.of(appender), (c) -> {});
     reader = logStorage.newReader();
   }
 
