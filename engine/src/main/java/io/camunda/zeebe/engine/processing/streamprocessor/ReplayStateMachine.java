@@ -132,6 +132,14 @@ public final class ReplayStateMachine {
     this.shouldProcessNext = shouldProcessNext;
   }
 
+  public long getLastSourceRecordPosition() {
+    return lastSourceRecordPosition;
+  }
+
+  public long getLastFollowUpEventPosition() {
+    return lastFollowUpEventPosition;
+  }
+
   /**
    * Reprocess the records. It returns the position of the last successfully processed record. If
    * there is nothing processed it returns {@link StreamProcessor#UNSET_POSITION}

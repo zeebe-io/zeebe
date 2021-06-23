@@ -337,11 +337,25 @@ public class StreamProcessor extends Actor implements HealthMonitorable {
   }
 
   public ActorFuture<Long> getLastProcessedPositionAsync() {
-    return actor.call(processingStateMachine::getLastSuccessfulProcessedEventPosition);
+    return actor.call(
+        () -> {
+          if (processingContext.shouldReplayContinuously()) {
+            return replayStateMachine.getLastSourceRecordPosition();
+          } else {
+            return processingStateMachine.getLastSuccessfulProcessedEventPosition();
+          }
+        });
   }
 
   public ActorFuture<Long> getLastWrittenPositionAsync() {
-    return actor.call(processingStateMachine::getLastWrittenEventPosition);
+    return actor.call(
+        () -> {
+          if (processingContext.shouldReplayContinuously()) {
+            return replayStateMachine.getLastFollowUpEventPosition();
+          } else {
+            return processingStateMachine.getLastWrittenEventPosition();
+          }
+        });
   }
 
   @Override
