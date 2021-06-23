@@ -166,6 +166,7 @@ public final class ReplayStateMachine {
     try {
 
       if (!shouldProcessNext.getAsBoolean()) {
+        LOG.info("Replay is paused");
         return;
       }
 
@@ -205,6 +206,8 @@ public final class ReplayStateMachine {
       final var processingException =
           new ProcessingException(
               "Unable to replay record", currentEvent, replayContext.metadata, e);
+
+      LOG.error("Error on #replayNextEvent", processingException);
       replayFuture.completeExceptionally(processingException);
     }
   }
