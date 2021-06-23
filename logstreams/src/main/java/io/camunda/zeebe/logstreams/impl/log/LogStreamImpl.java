@@ -85,6 +85,9 @@ public final class LogStreamImpl extends Actor implements LogStream, FailureList
         final LogStreamReader reader = new LogStreamReaderImpl(storageReader)) {
       internalSetCommitPosition(reader.seekToEnd());
     }
+
+    // NEW commit listener on logstorage
+    logStorage.addCommitListener(this::setCommitPosition);
   }
 
   @Override

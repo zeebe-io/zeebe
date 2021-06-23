@@ -17,6 +17,7 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Consumer;
 import java.util.function.LongConsumer;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
@@ -26,6 +27,7 @@ public class ListLogStorage implements LogStorage {
   private final ConcurrentNavigableMap<Long, Integer> positionIndexMapping;
   private final List<Entry> entries;
   private LongConsumer positionListener;
+  private final List<Consumer<Long>> listeners = new CopyOnWriteArrayList<>();
 
   public ListLogStorage() {
     entries = new CopyOnWriteArrayList<>();
@@ -58,9 +60,15 @@ public class ListLogStorage implements LogStorage {
         positionListener.accept(entry.getHighestPosition());
       }
       listener.onCommit(index);
+      listeners.forEach(c -> c.accept((long) index));
     } catch (final Exception e) {
       listener.onWriteError(e);
     }
+  }
+
+  @Override
+  public void addCommitListener(final Consumer<Long> commitListener) {
+    listeners.add(commitListener);
   }
 
   private static final class Entry {

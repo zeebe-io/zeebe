@@ -7,11 +7,13 @@
  */
 package io.camunda.zeebe.broker.system.partitions.impl.steps;
 
+import io.atomix.raft.RaftCommitListener;
 import io.camunda.zeebe.broker.system.partitions.PartitionContext;
 import io.camunda.zeebe.broker.system.partitions.PartitionStep;
 import io.camunda.zeebe.logstreams.storage.atomix.AtomixLogStorage;
 import io.camunda.zeebe.util.sched.future.ActorFuture;
 import io.camunda.zeebe.util.sched.future.CompletableActorFuture;
+import java.util.function.Consumer;
 
 public class AtomixLogStoragePartitionStep implements PartitionStep {
   private static final String WRONG_TERM_ERROR_MSG =
@@ -24,7 +26,16 @@ public class AtomixLogStoragePartitionStep implements PartitionStep {
 
     context.setAtomixLogStorage(
         AtomixLogStorage.ofPartition(
-            server::openReader, () -> context.getRaftPartition().getServer().getAppender()));
+            server::openReader,
+            () -> context.getRaftPartition().getServer().getAppender(),
+            (Consumer<Long> commitListener) ->
+                server.addCommitListener(
+                    new RaftCommitListener() {
+                      @Override
+                      public void onCommit(final long index) {
+                        commitListener.accept(index);
+                      }
+                    })));
     openFuture.complete(null);
 
     return openFuture;

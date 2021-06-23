@@ -8,6 +8,7 @@
 package io.camunda.zeebe.logstreams.storage;
 
 import java.nio.ByteBuffer;
+import java.util.function.Consumer;
 
 /**
  * Storage abstraction for the log stream API. The storage is expected to store the given blocks of
@@ -45,6 +46,8 @@ public interface LogStorage {
    */
   void append(
       long lowestPosition, long highestPosition, ByteBuffer blockBuffer, AppendListener listener);
+
+  void addCommitListener(Consumer<Long> commitListener);
 
   /**
    * An append listener can be added to an append call to be notified of different events that can

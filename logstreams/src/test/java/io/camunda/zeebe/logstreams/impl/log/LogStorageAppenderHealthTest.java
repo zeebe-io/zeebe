@@ -22,6 +22,7 @@ import io.camunda.zeebe.util.sched.testing.ActorSchedulerRule;
 import java.nio.ByteBuffer;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -136,6 +137,9 @@ public final class LogStorageAppenderHealthTest {
         final AppendListener listener) {
       actor.run(() -> onAppend.accept(highestPosition, listener));
     }
+
+    @Override
+    public void addCommitListener(final Consumer<Long> commitListener) {}
 
     @Override
     public void close() {

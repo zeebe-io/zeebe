@@ -11,6 +11,7 @@ import io.atomix.raft.zeebe.ZeebeLogAppender;
 import io.camunda.zeebe.logstreams.storage.LogStorage;
 import java.nio.ByteBuffer;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /**
@@ -24,18 +25,22 @@ public class AtomixLogStorage implements LogStorage {
 
   private final AtomixReaderFactory readerFactory;
   private final Supplier<Optional<ZeebeLogAppender>> logAppenderSupplier;
+  private final Consumer<Consumer<Long>> onCommitListenerRegistry;
 
   public AtomixLogStorage(
       final AtomixReaderFactory readerFactory,
-      final Supplier<Optional<ZeebeLogAppender>> logAppenderSupplier) {
+      final Supplier<Optional<ZeebeLogAppender>> logAppenderSupplier,
+      final Consumer<Consumer<Long>> onCommitListenerRegistry) {
     this.readerFactory = readerFactory;
     this.logAppenderSupplier = logAppenderSupplier;
+    this.onCommitListenerRegistry = onCommitListenerRegistry;
   }
 
   public static AtomixLogStorage ofPartition(
       final AtomixReaderFactory readerFactory,
-      final Supplier<Optional<ZeebeLogAppender>> appenderSupplier) {
-    return new AtomixLogStorage(readerFactory, appenderSupplier);
+      final Supplier<Optional<ZeebeLogAppender>> appenderSupplier,
+      final Consumer<Consumer<Long>> onCommitListenerRegistry) {
+    return new AtomixLogStorage(readerFactory, appenderSupplier, onCommitListenerRegistry);
   }
 
   @Override
@@ -52,5 +57,10 @@ public class AtomixLogStorage implements LogStorage {
     final var adapter = new AtomixAppendListenerAdapter(listener);
     final var zeebeLogAppender = logAppenderSupplier.get().orElseThrow();
     zeebeLogAppender.appendEntry(lowestPosition, highestPosition, buffer, adapter);
+  }
+
+  @Override
+  public void addCommitListener(final Consumer<Long> commitListener) {
+    onCommitListenerRegistry.accept(commitListener);
   }
 }
