@@ -25,7 +25,6 @@ import com.google.common.base.Stopwatch;
 import io.atomix.raft.RaftCommitListener;
 import io.atomix.raft.partition.impl.RaftPartitionServer;
 import io.atomix.raft.storage.log.IndexedRaftLogEntry;
-import io.atomix.raft.storage.log.entry.RaftLogEntry;
 import io.atomix.raft.zeebe.util.TestAppender;
 import io.atomix.raft.zeebe.util.ZeebeTestHelper;
 import io.atomix.raft.zeebe.util.ZeebeTestNode;
@@ -285,7 +284,7 @@ public class ZeebeTest {
     private final AtomicInteger calledCount = new AtomicInteger(0);
 
     @Override
-    public <T extends RaftLogEntry> void onCommit(final long index) {
+    public void onCommit(final long index) {
       lastCommitted.set(index);
       calledCount.incrementAndGet();
     }

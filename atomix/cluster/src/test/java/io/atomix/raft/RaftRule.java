@@ -33,7 +33,6 @@ import io.atomix.raft.snapshot.TestSnapshotStore;
 import io.atomix.raft.storage.RaftStorage;
 import io.atomix.raft.storage.log.IndexedRaftLogEntry;
 import io.atomix.raft.storage.log.RaftLogReader.Mode;
-import io.atomix.raft.storage.log.entry.RaftLogEntry;
 import io.atomix.raft.zeebe.EntryValidator;
 import io.atomix.raft.zeebe.NoopEntryValidator;
 import io.atomix.raft.zeebe.ZeebeLogAppender;
@@ -351,7 +350,7 @@ public final class RaftRule extends ExternalResource {
         .addCommitListener(
             new RaftCommitListener() {
               @Override
-              public <T extends RaftLogEntry> void onCommit(final long index) {
+              public void onCommit(final long index) {
                 final var currentIndex = index;
 
                 memberLog.put(raftServer.name(), currentIndex);
