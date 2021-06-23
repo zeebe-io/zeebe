@@ -109,7 +109,7 @@ public class StateControllerImpl implements StateController, PersistedSnapshotLi
 
   @Override
   public void recover() throws Exception {
-    FileUtil.deleteFolderIfExists(runtimeDirectory);
+    close();
 
     final var optLatestSnapshot = constructableSnapshotStore.getLatestSnapshot();
     if (optLatestSnapshot.isPresent()) {
