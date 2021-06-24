@@ -764,9 +764,8 @@ public class PassiveRole extends InactiveRole {
               lastIndex,
               index);
           raftLog.reset(index + 1);
+          raftContext.transition(Role.FOLLOWER);
         }
-
-        raftContext.transition(Role.FOLLOWER);
       } else {
         threadContext.execute(() -> onNewSnapshot(persistedSnapshot));
       }
