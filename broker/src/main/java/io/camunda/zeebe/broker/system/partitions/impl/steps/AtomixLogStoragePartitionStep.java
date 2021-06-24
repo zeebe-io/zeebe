@@ -8,6 +8,7 @@
 package io.camunda.zeebe.broker.system.partitions.impl.steps;
 
 import io.atomix.raft.RaftCommitListener;
+import io.atomix.raft.storage.log.IndexedRaftLogEntry;
 import io.camunda.zeebe.broker.system.partitions.PartitionContext;
 import io.camunda.zeebe.broker.system.partitions.PartitionStep;
 import io.camunda.zeebe.logstreams.storage.atomix.AtomixLogStorage;
@@ -32,8 +33,11 @@ public class AtomixLogStoragePartitionStep implements PartitionStep {
                 server.addCommitListener(
                     new RaftCommitListener() {
                       @Override
-                      public void onCommit(final long index) {
-                        commitListener.accept(index);
+                      public void onCommit(final IndexedRaftLogEntry index) {
+                        if (index.isApplicationEntry()) {
+                          final var applicationEntry = index.getApplicationEntry();
+                          commitListener.accept(applicationEntry.highestPosition());
+                        }
                       }
                     })));
     openFuture.complete(null);

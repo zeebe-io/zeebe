@@ -441,7 +441,7 @@ public class RaftTest extends ConcurrentTestCase {
     final RaftServer leader = getLeader(servers).get();
     final MemberId leaderId = leader.getContext().getCluster().getLocalMember().memberId();
     final AtomicLong commitIndex = new AtomicLong();
-    leader.getContext().addCommitListener(commitIndex::set);
+    leader.getContext().addCommitListener(newValue -> commitIndex.set(newValue.index()));
     appendEntry(leader);
     protocolFactory.partition(leaderId);
     waitUntil(() -> !leader.isLeader(), 100);

@@ -308,7 +308,7 @@ public final class LogStreamImpl extends Actor implements LogStream, FailureList
                         subscription,
                         maxFrameLength,
                         (v) -> {} // we ignore commits here since we have no a registered commit
-                                  // listener on the storage
+                        // listener on the storage
                         );
 
                 actorScheduler

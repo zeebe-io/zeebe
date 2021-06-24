@@ -350,8 +350,8 @@ public final class RaftRule extends ExternalResource {
         .addCommitListener(
             new RaftCommitListener() {
               @Override
-              public void onCommit(final long index) {
-                final var currentIndex = index;
+              public void onCommit(final IndexedRaftLogEntry index) {
+                final var currentIndex = index.index();
 
                 memberLog.put(raftServer.name(), currentIndex);
                 if (highestCommit < currentIndex) {

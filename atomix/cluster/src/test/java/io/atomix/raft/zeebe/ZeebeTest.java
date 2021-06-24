@@ -284,8 +284,8 @@ public class ZeebeTest {
     private final AtomicInteger calledCount = new AtomicInteger(0);
 
     @Override
-    public void onCommit(final long index) {
-      lastCommitted.set(index);
+    public void onCommit(final IndexedRaftLogEntry index) {
+      lastCommitted.set(index.index());
       calledCount.incrementAndGet();
     }
   }

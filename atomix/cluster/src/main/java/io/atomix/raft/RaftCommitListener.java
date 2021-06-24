@@ -16,8 +16,10 @@
  */
 package io.atomix.raft;
 
+import io.atomix.raft.storage.log.IndexedRaftLogEntry;
+
 @FunctionalInterface
 public interface RaftCommitListener {
 
-  void onCommit(long index);
+  void onCommit(IndexedRaftLogEntry index);
 }

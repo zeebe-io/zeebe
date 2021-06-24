@@ -49,6 +49,7 @@ import io.atomix.raft.roles.PromotableRole;
 import io.atomix.raft.roles.RaftRole;
 import io.atomix.raft.storage.RaftStorage;
 import io.atomix.raft.storage.StorageException;
+import io.atomix.raft.storage.log.IndexedRaftLogEntry;
 import io.atomix.raft.storage.log.RaftLog;
 import io.atomix.raft.storage.log.RaftLogReader;
 import io.atomix.raft.storage.system.MetaStore;
@@ -340,7 +341,7 @@ public class RaftContext implements AutoCloseable, HealthMonitorable {
    *
    * @param lastCommitIndex index of the most recently committed entry
    */
-  public void notifyCommitListeners(final long lastCommitIndex) {
+  public void notifyCommitListeners(final IndexedRaftLogEntry lastCommitIndex) {
     commitListeners.forEach(listener -> listener.onCommit(lastCommitIndex));
   }
 
