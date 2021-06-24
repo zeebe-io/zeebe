@@ -113,6 +113,8 @@ public final class Broker implements AutoCloseable {
           new ExporterDirectorPartitionStep());
   private static final List<PartitionStep> FOLLOWER_STEPS =
       List.of(
+          new LogStreamPartitionStep(), // we need to do it here as well since from Leader to
+                                        // follower transition will cause closing the log stream
           new ZeebeDbPartitionStep(), // for simplicity; we need to recover the last snapshot from
           // Leader-To-Follower, on bootstrap we would do it twice now,
           // but this makes it still simpler to implement we dont want
