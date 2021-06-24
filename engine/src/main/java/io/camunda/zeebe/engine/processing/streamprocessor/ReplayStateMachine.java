@@ -98,6 +98,7 @@ public final class ReplayStateMachine {
   private final BooleanSupplier abortCondition;
 
   // current iteration
+  private boolean isOnReplay = false;
   private long lastSourceRecordPosition;
   private long lastFollowUpEventPosition;
   private long snapshotPosition;
@@ -165,6 +166,11 @@ public final class ReplayStateMachine {
   void replayNextEvent() {
     try {
 
+      if (isOnReplay) {
+        // already an replay ongoing - we have been triggered due to commit listener
+        return;
+      }
+
       if (!shouldProcessNext.getAsBoolean()) {
         LOG.info("Replay is paused");
         return;
@@ -184,6 +190,7 @@ public final class ReplayStateMachine {
         // continuously replay mode will cause recall method on next commit
       }
 
+      isOnReplay = true;
       currentEvent = logStreamReader.next();
       final var currentEventPosition = currentEvent.getPosition();
       if (lastEventPosition < currentEventPosition) {
@@ -199,6 +206,7 @@ public final class ReplayStateMachine {
       } else {
         markAsProcessed(
             currentEventPosition, currentEvent.getSourceEventPosition(), currentEvent.getKey());
+        isOnReplay = false;
         actor.submit(this::replayNextEvent);
       }
 
@@ -208,6 +216,7 @@ public final class ReplayStateMachine {
               "Unable to replay record", currentEvent, replayContext.metadata, e);
 
       LOG.error("Error on #replayNextEvent", processingException);
+      isOnReplay = false;
       replayFuture.completeExceptionally(processingException);
     }
   }
@@ -329,6 +338,9 @@ public final class ReplayStateMachine {
         (bool, throwable) -> {
           // update state should be retried endless until it worked
           assert throwable == null : "On reprocessing there shouldn't be any exception thrown.";
+
+          // done with the replay of that event
+          isOnReplay = false;
 
           actor.submit(this::replayNextEvent);
         });
