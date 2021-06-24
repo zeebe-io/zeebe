@@ -120,8 +120,7 @@ public class PassiveRole extends InactiveRole {
    * @return the snapshot listener which will be installed
    */
   protected PersistedSnapshotListener createSnapshotListener() {
-    raft.transition(Role.FOLLOWER);
-    return new ResetWriterSnapshotListener(log, raft.getThreadContext(), raft.getLog());
+    return new ResetWriterSnapshotListener(log, raft, raft.getThreadContext(), raft.getLog());
   }
 
   private void addSnapshotListener() {
@@ -734,10 +733,15 @@ public class PassiveRole extends InactiveRole {
     private final ThreadContext threadContext;
     private final RaftLog raftLog;
     private final Logger log;
+    private final RaftContext raftContext;
 
     ResetWriterSnapshotListener(
-        final Logger log, final ThreadContext threadContext, final RaftLog raftLog) {
+        final Logger log,
+        final RaftContext raftContext,
+        final ThreadContext threadContext,
+        final RaftLog raftLog) {
       this.log = log;
+      this.raftContext = raftContext;
       this.threadContext = threadContext;
       this.raftLog = raftLog;
     }
@@ -762,6 +766,7 @@ public class PassiveRole extends InactiveRole {
           raftLog.reset(index + 1);
         }
 
+        raftContext.transition(Role.FOLLOWER);
       } else {
         threadContext.execute(() -> onNewSnapshot(persistedSnapshot));
       }
