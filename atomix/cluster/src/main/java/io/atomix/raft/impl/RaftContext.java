@@ -120,6 +120,7 @@ public class RaftContext implements AutoCloseable, HealthMonitorable {
   private final Random random;
   private PersistedSnapshot currentSnapshot;
   private volatile HealthStatus health = HealthStatus.HEALTHY;
+  private final RaftLogReader commitEntryReader;
 
   public RaftContext(
       final String name,
@@ -185,6 +186,7 @@ public class RaftContext implements AutoCloseable, HealthMonitorable {
     replicationMetrics = new RaftReplicationMetrics(name);
     replicationMetrics.setAppendIndex(raftLog.getLastIndex());
     started = true;
+    commitEntryReader = raftLog.openReader();
   }
 
   private void verifySnapshotLogConsistent() {
@@ -336,6 +338,22 @@ public class RaftContext implements AutoCloseable, HealthMonitorable {
     commitListeners.add(commitListener);
   }
 
+  public void notifyCommitListeners(final long lastCommitIndex) {
+    commitEntryReader.seek(lastCommitIndex);
+
+    if (!commitEntryReader.hasNext()) {
+      throw new IllegalStateException(
+          "This should not happen. Searched for committed entry with index: " + lastCommitIndex);
+    }
+
+    final var committedEntry = commitEntryReader.next();
+
+    if (committedEntry == null) {
+      throw new IllegalStateException(
+          "This should not happen. Searched for committed entry with index: " + lastCommitIndex);
+    }
+    commitListeners.forEach(listener -> listener.onCommit(committedEntry));
+  }
   /**
    * Notifies all listeners of the latest entry.
    *
