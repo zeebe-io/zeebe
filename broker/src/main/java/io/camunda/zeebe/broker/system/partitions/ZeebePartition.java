@@ -88,12 +88,13 @@ public final class ZeebePartition extends Actor
       case INACTIVE:
         nextTransitionFuture = transitionToInactive();
         break;
+      case CANDIDATE:
       case PASSIVE:
       case PROMOTABLE:
-      case CANDIDATE:
+        break;
       case FOLLOWER:
       default:
-        if (raftRole == null || raftRole == Role.LEADER) {
+        if (raftRole == null || raftRole == Role.LEADER || raftRole == Role.FOLLOWER) {
           nextTransitionFuture = followerTransition(newTerm);
         }
         break;

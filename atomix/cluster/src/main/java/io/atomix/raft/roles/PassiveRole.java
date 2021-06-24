@@ -18,6 +18,7 @@ package io.atomix.raft.roles;
 
 import io.atomix.raft.RaftError;
 import io.atomix.raft.RaftServer;
+import io.atomix.raft.RaftServer.Role;
 import io.atomix.raft.impl.RaftContext;
 import io.atomix.raft.metrics.SnapshotReplicationMetrics;
 import io.atomix.raft.protocol.AppendRequest;
@@ -119,6 +120,7 @@ public class PassiveRole extends InactiveRole {
    * @return the snapshot listener which will be installed
    */
   protected PersistedSnapshotListener createSnapshotListener() {
+    raft.transition(Role.FOLLOWER);
     return new ResetWriterSnapshotListener(log, raft.getThreadContext(), raft.getLog());
   }
 
@@ -759,6 +761,7 @@ public class PassiveRole extends InactiveRole {
               index);
           raftLog.reset(index + 1);
         }
+
       } else {
         threadContext.execute(() -> onNewSnapshot(persistedSnapshot));
       }

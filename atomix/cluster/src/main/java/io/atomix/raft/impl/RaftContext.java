@@ -504,7 +504,7 @@ public class RaftContext implements AutoCloseable, HealthMonitorable {
     checkThread();
     checkNotNull(role);
 
-    if (this.role.role() == role) {
+    if (role != Role.FOLLOWER && this.role.role() == role) { // we want to allow follower restarts
       return;
     }
 
