@@ -17,10 +17,18 @@ source benchmarks/setup/utils.sh
 
 if [ -z $1 ]
 then
-  echo "Please provide a benchmark name! Format should be 'YOUR_NAME-TOPIC'"
+  echo "Please provide a benchmark name (format should be 'YOUR_NAME-TOPIC') OR '-c' for (reuse current namespace)!"
   exit 1
 fi
-benchmark=$1
+
+if [ $1 -eq "-c" ]
+  benchmark=$(kubens -c)
+  reuse=true
+else
+  benchmark=$1
+  reuse=false
+fi
+
 
 # Check if docker daemon is running
 if ! docker info >/dev/null 2>&1; then
@@ -33,26 +41,33 @@ mvn clean install -DskipTests -T1C
 docker build --build-arg DISTBALL=dist/target/camunda-cloud-zeebe-*.tar.gz --build-arg APP_ENV=dev -t "gcr.io/zeebe-io/zeebe:$benchmark" .
 docker push "gcr.io/zeebe-io/zeebe:$benchmark"
 
-cd benchmarks/project
+if [ !reuse ]
+then
 
-sed_inplace "s/:SNAPSHOT/:$benchmark/" docker-compose.yml
-# Use --no-cache to force rebuild the image for the benchmark application. Without this changes to zeebe-client were not picked up. This can take longer to build.
-docker-compose build --no-cache
-docker-compose push
-git restore -- docker-compose.yml
+ cd benchmarks/project
 
-cd ../setup/
+ sed_inplace "s/:SNAPSHOT/:$benchmark/" docker-compose.yml
+ # Use --no-cache to force rebuild the image for the benchmark application. Without this changes to zeebe-client were not picked up. This can take longer to build.
+ docker-compose build --no-cache
+ docker-compose push
+ git restore -- docker-compose.yml
+ cd ../setup/
+ ./newBenchmark.sh "$benchmark"
 
-./newBenchmark.sh "$benchmark"
+  cd "$benchmark"
 
-cd "$benchmark"
+  # calls OS specific sed inplace function
+  sed_inplace 's/camunda\/zeebe/gcr.io\/zeebe-io\/zeebe/' zeebe-values.yaml
+  sed_inplace "s/SNAPSHOT/$benchmark/" zeebe-values.yaml
+  sed_inplace "s/starter:SNAPSHOT/starter:$benchmark/" starter.yaml
+  sed_inplace "s/starter:SNAPSHOT/starter:$benchmark/" simpleStarter.yaml
+  sed_inplace "s/starter:SNAPSHOT/starter:$benchmark/" timer.yaml
+  sed_inplace "s/worker:SNAPSHOT/worker:$benchmark/" worker.yaml
 
-# calls OS specific sed inplace function
-sed_inplace 's/camunda\/zeebe/gcr.io\/zeebe-io\/zeebe/' zeebe-values.yaml
-sed_inplace "s/SNAPSHOT/$benchmark/" zeebe-values.yaml
-sed_inplace "s/starter:SNAPSHOT/starter:$benchmark/" starter.yaml
-sed_inplace "s/starter:SNAPSHOT/starter:$benchmark/" simpleStarter.yaml
-sed_inplace "s/starter:SNAPSHOT/starter:$benchmark/" timer.yaml
-sed_inplace "s/worker:SNAPSHOT/worker:$benchmark/" worker.yaml
+else
+  cd "benchmarks/setup/$benchmark"
+fi
+
+
 
 make zeebe starter worker
