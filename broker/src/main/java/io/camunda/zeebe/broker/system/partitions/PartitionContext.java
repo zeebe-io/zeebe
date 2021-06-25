@@ -13,6 +13,7 @@ import io.atomix.raft.storage.log.RaftLogReader;
 import io.camunda.zeebe.broker.PartitionListener;
 import io.camunda.zeebe.broker.exporter.repo.ExporterRepository;
 import io.camunda.zeebe.broker.exporter.stream.ExporterDirector;
+import io.camunda.zeebe.broker.exporter.stream.ExporterSatellite;
 import io.camunda.zeebe.broker.logstreams.LogDeletionService;
 import io.camunda.zeebe.broker.system.configuration.BrokerCfg;
 import io.camunda.zeebe.broker.system.partitions.impl.AsyncSnapshotDirector;
@@ -66,6 +67,7 @@ public class PartitionContext {
 
   private long currentTerm;
   private Role currentRole;
+  private ExporterSatellite exporterSatellite;
 
   public PartitionContext(
       final int nodeId,

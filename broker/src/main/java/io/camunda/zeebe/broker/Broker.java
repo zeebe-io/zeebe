@@ -52,6 +52,7 @@ import io.camunda.zeebe.broker.system.partitions.impl.PartitionProcessingState;
 import io.camunda.zeebe.broker.system.partitions.impl.PartitionTransitionImpl;
 import io.camunda.zeebe.broker.system.partitions.impl.steps.AtomixLogStoragePartitionStep;
 import io.camunda.zeebe.broker.system.partitions.impl.steps.ExporterDirectorPartitionStep;
+import io.camunda.zeebe.broker.system.partitions.impl.steps.ExporterSatellitePartitionStep;
 import io.camunda.zeebe.broker.system.partitions.impl.steps.LogDeletionPartitionStep;
 import io.camunda.zeebe.broker.system.partitions.impl.steps.LogStreamPartitionStep;
 import io.camunda.zeebe.broker.system.partitions.impl.steps.RaftLogReaderPartitionStep;
@@ -121,7 +122,9 @@ public final class Broker implements AutoCloseable {
           // to do it from Follower-To-Leader switch
           new StreamProcessorPartitionStep(ReplayMode.CONTINUOUSLY),
           new SnapshotDirectorPartitionStep(),
-          new RocksDbMetricExporterPartitionStep());
+          new RocksDbMetricExporterPartitionStep(),
+          new ExporterSatellitePartitionStep() // in order to receive exporter updates
+          );
 
   private final SystemContext brokerContext;
   private final List<PartitionListener> partitionListeners;

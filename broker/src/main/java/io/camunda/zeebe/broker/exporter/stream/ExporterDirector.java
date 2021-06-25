@@ -7,6 +7,8 @@
  */
 package io.camunda.zeebe.broker.exporter.stream;
 
+import static io.camunda.zeebe.broker.exporter.stream.ExporterSatellite.TOPIC_FORMAT;
+
 import io.camunda.zeebe.broker.Loggers;
 import io.camunda.zeebe.broker.system.partitions.PartitionMessagingService;
 import io.camunda.zeebe.db.ZeebeDb;
@@ -75,7 +77,7 @@ public final class ExporterDirector extends Actor implements HealthMonitorable {
   private boolean isPaused;
   private ExporterPhase exporterPhase;
   private final PartitionMessagingService partitionMessagingService;
-  private final int partitionId;
+  private final String exporterPositionsTopic;
 
   public ExporterDirector(final ExporterDirectorContext context, final boolean shouldPauseOnStart) {
     name = context.getName();
@@ -83,7 +85,7 @@ public final class ExporterDirector extends Actor implements HealthMonitorable {
         context.getDescriptors().stream().map(ExporterContainer::new).collect(Collectors.toList());
 
     logStream = Objects.requireNonNull(context.getLogStream());
-    partitionId = logStream.getPartitionId();
+    final var partitionId = logStream.getPartitionId();
     metrics = new ExporterMetrics(partitionId);
     recordExporter = new RecordExporter(metrics, containers, partitionId);
     exportingRetryStrategy = new BackOffRetryStrategy(actor, Duration.ofSeconds(10));
@@ -91,6 +93,7 @@ public final class ExporterDirector extends Actor implements HealthMonitorable {
     zeebeDb = context.getZeebeDb();
     isPaused = shouldPauseOnStart;
     partitionMessagingService = context.getPartitionMessagingService();
+    exporterPositionsTopic = String.format(TOPIC_FORMAT, partitionId);
   }
 
   public ActorFuture<Void> startAsync(final ActorScheduler actorScheduler) {
@@ -288,12 +291,10 @@ public final class ExporterDirector extends Actor implements HealthMonitorable {
   }
 
   private void sendExporterState() {
-
     final var exportPositionsReq = new ExportPositionsReq();
     state.visitPositions(exportPositionsReq::putExporter);
 
-    partitionMessagingService.broadcast(
-        "exporterState-" + partitionId, exportPositionsReq.toByteBuffer());
+    partitionMessagingService.broadcast(exporterPositionsTopic, exportPositionsReq.toByteBuffer());
   }
 
   private void skipRecord(final LoggedEvent currentEvent) {
