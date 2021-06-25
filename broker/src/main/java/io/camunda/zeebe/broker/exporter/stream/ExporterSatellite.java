@@ -14,6 +14,7 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.agrona.concurrent.UnsafeBuffer;
 
 public class ExporterSatellite implements AutoCloseable {
@@ -25,6 +26,7 @@ public class ExporterSatellite implements AutoCloseable {
   private ExecutorService executorService;
   private final String exporterPositionsTopic;
   private final String threadExecutorName;
+  private final AtomicBoolean closed = new AtomicBoolean(false);
 
   public ExporterSatellite(
       final PartitionMessagingService partitionMessagingService,
@@ -44,11 +46,20 @@ public class ExporterSatellite implements AutoCloseable {
   }
 
   private void storeExporterPositions(final ByteBuffer byteBuffer) {
+
     final var readBuffer = new UnsafeBuffer(byteBuffer);
     final var exportPositionsReq = new ExportPositionsReq();
     exportPositionsReq.wrap(readBuffer, 0, readBuffer.capacity());
 
     final var exporterPositions = exportPositionsReq.getExporterPositions();
+
+    if (closed.get()) {
+      Loggers.EXPORTER_LOGGER.warn(
+          "CLOSED: [{}] Got exporter state {}, but already closed. Do nothing.",
+          exporterPositionsTopic,
+          exporterPositions);
+      return;
+    }
 
     Loggers.EXPORTER_LOGGER.debug(
         "[{}] Received new exporter state {}", exporterPositionsTopic, exporterPositions);
@@ -58,6 +69,7 @@ public class ExporterSatellite implements AutoCloseable {
 
   @Override
   public void close() throws Exception {
+    closed.set(true);
     partitionMessagingService.unsubscribe(exporterPositionsTopic);
 
     if (executorService != null) {

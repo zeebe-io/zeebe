@@ -299,4 +299,12 @@ public class PartitionContext {
   public void setCurrentRole(final Role currentRole) {
     this.currentRole = currentRole;
   }
+
+  public ExporterSatellite getExporterSatellite() {
+    return exporterSatellite;
+  }
+
+  public void setExporterSatellite(final ExporterSatellite exporterSatellite) {
+    this.exporterSatellite = exporterSatellite;
+  }
 }

@@ -16,20 +16,18 @@ import io.camunda.zeebe.util.sched.future.CompletableActorFuture;
 
 public class ExporterSatellitePartitionStep implements PartitionStep {
 
-  private ExporterSatellite exporterSatellite;
-
   @Override
   public ActorFuture<Void> open(final PartitionContext context) {
 
     // in order to receive exporter states we need to install the satellite service
 
-    exporterSatellite =
+    final var exporterSatellite =
         new ExporterSatellite(
             context.getMessagingService(),
             context.getZeebeDb(),
             context.getNodeId(),
             context.getPartitionId());
-
+    context.setExporterSatellite(exporterSatellite);
     exporterSatellite.subscribe();
 
     return CompletableActorFuture.completed(null);
@@ -38,8 +36,8 @@ public class ExporterSatellitePartitionStep implements PartitionStep {
   @Override
   public ActorFuture<Void> close(final PartitionContext context) {
     try {
-      if (exporterSatellite != null) {
-        exporterSatellite.close();
+      if (context.getExporterSatellite() != null) {
+        context.getExporterSatellite().close();
       }
     } catch (final Exception e) {
       Loggers.SYSTEM_LOGGER.error(
@@ -47,7 +45,7 @@ public class ExporterSatellitePartitionStep implements PartitionStep {
           context.getPartitionId(),
           e);
     } finally {
-      exporterSatellite = null;
+      context.setExporterSatellite(null);
     }
 
     return CompletableActorFuture.completed(null);
