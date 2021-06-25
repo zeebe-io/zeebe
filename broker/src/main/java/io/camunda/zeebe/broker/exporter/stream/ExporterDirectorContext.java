@@ -8,6 +8,7 @@
 package io.camunda.zeebe.broker.exporter.stream;
 
 import io.camunda.zeebe.broker.exporter.repo.ExporterDescriptor;
+import io.camunda.zeebe.broker.system.partitions.PartitionMessagingService;
 import io.camunda.zeebe.db.ZeebeDb;
 import io.camunda.zeebe.logstreams.log.LogStream;
 import java.util.Collection;
@@ -19,6 +20,7 @@ public final class ExporterDirectorContext {
   private LogStream logStream;
   private Collection<ExporterDescriptor> descriptors;
   private ZeebeDb zeebeDb;
+  private PartitionMessagingService partitionMessagingService;
 
   public int getId() {
     return id;
@@ -38,6 +40,10 @@ public final class ExporterDirectorContext {
 
   public ZeebeDb getZeebeDb() {
     return zeebeDb;
+  }
+
+  public PartitionMessagingService getPartitionMessagingService() {
+    return partitionMessagingService;
   }
 
   public ExporterDirectorContext id(final int id) {
@@ -62,6 +68,12 @@ public final class ExporterDirectorContext {
 
   public ExporterDirectorContext zeebeDb(final ZeebeDb zeebeDb) {
     this.zeebeDb = zeebeDb;
+    return this;
+  }
+
+  public ExporterDirectorContext partitionMessagingService(
+      final PartitionMessagingService messagingService) {
+    partitionMessagingService = messagingService;
     return this;
   }
 }

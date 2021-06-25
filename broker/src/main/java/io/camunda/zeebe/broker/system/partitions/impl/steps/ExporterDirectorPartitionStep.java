@@ -28,6 +28,7 @@ public class ExporterDirectorPartitionStep implements PartitionStep {
             .name(Actor.buildActorName(context.getNodeId(), "Exporter", context.getPartitionId()))
             .logStream(context.getLogStream())
             .zeebeDb(context.getZeebeDb())
+            .partitionMessagingService(context.getMessagingService())
             .descriptors(exporterDescriptors);
 
     final ExporterDirector director = new ExporterDirector(exporterCtx, !context.shouldExport());

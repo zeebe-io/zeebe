@@ -8,6 +8,7 @@
 package io.camunda.zeebe.broker.exporter.stream;
 
 import io.camunda.zeebe.broker.Loggers;
+import io.camunda.zeebe.broker.system.partitions.PartitionMessagingService;
 import io.camunda.zeebe.db.ZeebeDb;
 import io.camunda.zeebe.engine.processing.streamprocessor.EventFilter;
 import io.camunda.zeebe.engine.processing.streamprocessor.RecordValues;
@@ -73,6 +74,8 @@ public final class ExporterDirector extends Actor implements HealthMonitorable {
   private boolean inExportingPhase;
   private boolean isPaused;
   private ExporterPhase exporterPhase;
+  private final PartitionMessagingService partitionMessagingService;
+  private final int partitionId;
 
   public ExporterDirector(final ExporterDirectorContext context, final boolean shouldPauseOnStart) {
     name = context.getName();
@@ -80,13 +83,14 @@ public final class ExporterDirector extends Actor implements HealthMonitorable {
         context.getDescriptors().stream().map(ExporterContainer::new).collect(Collectors.toList());
 
     logStream = Objects.requireNonNull(context.getLogStream());
-    final int partitionId = logStream.getPartitionId();
+    partitionId = logStream.getPartitionId();
     metrics = new ExporterMetrics(partitionId);
     recordExporter = new RecordExporter(metrics, containers, partitionId);
     exportingRetryStrategy = new BackOffRetryStrategy(actor, Duration.ofSeconds(10));
     recordWrapStrategy = new EndlessRetryStrategy(actor);
     zeebeDb = context.getZeebeDb();
     isPaused = shouldPauseOnStart;
+    partitionMessagingService = context.getPartitionMessagingService();
   }
 
   public ActorFuture<Void> startAsync(final ActorScheduler actorScheduler) {
@@ -276,9 +280,20 @@ public final class ExporterDirector extends Actor implements HealthMonitorable {
         exporterPhase = ExporterPhase.PAUSED;
       }
 
+      actor.runAtFixedRate(Duration.ofSeconds(15), this::sendExporterState);
+
     } else {
       actor.close();
     }
+  }
+
+  private void sendExporterState() {
+
+    final var exportPositionsReq = new ExportPositionsReq();
+    state.visitPositions(exportPositionsReq::putExporter);
+
+    partitionMessagingService.broadcast(
+        "exporterState-" + partitionId, exportPositionsReq.toByteBuffer());
   }
 
   private void skipRecord(final LoggedEvent currentEvent) {
