@@ -265,6 +265,11 @@ public class PassiveRole extends InactiveRole {
       try {
         final var snapshot = pendingSnapshot.persist().join();
         log.info("Committed snapshot {}", snapshot);
+
+        pendingSnapshot = null;
+        pendingSnapshotStartTimestamp = 0L;
+        snapshotReplicationMetrics.decrementCount();
+        snapshotReplicationMetrics.observeDuration(elapsed);
         // Must be executed immediately before any other operation on this threadcontext. Hence
         // don't wait for the listener to be notified by the snapshot store.
         snapshotListener.onNewSnapshot(snapshot);
@@ -279,11 +284,6 @@ public class PassiveRole extends InactiveRole {
                         RaftError.Type.APPLICATION_ERROR, "Failed to commit pending snapshot")
                     .build()));
       }
-
-      pendingSnapshot = null;
-      pendingSnapshotStartTimestamp = 0L;
-      snapshotReplicationMetrics.decrementCount();
-      snapshotReplicationMetrics.observeDuration(elapsed);
     } else {
       setNextExpected(request.nextChunkId());
     }
