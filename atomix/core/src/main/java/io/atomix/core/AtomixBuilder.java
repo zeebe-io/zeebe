@@ -16,13 +16,13 @@
  */
 package io.atomix.core;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 import io.atomix.cluster.AtomixClusterBuilder;
+import io.atomix.cluster.ClusterConfig;
 import io.atomix.cluster.MemberId;
 import io.atomix.cluster.discovery.NodeDiscoveryProvider;
 import io.atomix.cluster.protocol.GroupMembershipProtocol;
-import io.atomix.primitive.partition.ManagedPartitionGroup;
 import io.atomix.utils.net.Address;
 import java.util.Collection;
 import java.util.Properties;
@@ -55,47 +55,11 @@ import java.util.Properties;
  */
 public class AtomixBuilder extends AtomixClusterBuilder {
 
-  private final AtomixConfig atomixConfig;
+  private final ClusterConfig clsuterConfig;
 
-  AtomixBuilder(final AtomixConfig atomixConfig) {
-    super(atomixConfig.getClusterConfig());
-    this.atomixConfig = checkNotNull(atomixConfig);
-  }
-
-  /**
-   * Sets the primitive partition groups.
-   *
-   * <p>The primitive partition groups represent partitions that are directly accessible to
-   * distributed primitives. To use partitioned primitives, at least one node must be configured
-   * with at least one data partition group.
-   *
-   * <pre>{@code
-   * Atomix atomix = Atomix.builder()
-   *   .withPartitionGroups(PrimaryBackupPartitionGroup.builder("data")
-   *     .withNumPartitions(32)
-   *     .build())
-   *   .build();
-   *
-   * }</pre>
-   *
-   * The partition group name is used to uniquely identify the group when constructing primitive
-   * instances. Partitioned primitives will reference a specific protocol and partition group within
-   * which to replicate the primitive.
-   *
-   * <p>The configured partition groups are replicated on whichever nodes define them in this
-   * configuration. That is, this node will participate in whichever partition groups are provided
-   * to this method.
-   *
-   * <p>The partition groups can also be configured in {@code atomix.conf} under the {@code
-   * partition-groups} key.
-   *
-   * @param partitionGroup the partition group
-   * @return the Atomix builder
-   * @throws NullPointerException if the partition groups are null
-   */
-  public AtomixBuilder withPartitionGroup(final ManagedPartitionGroup partitionGroup) {
-    atomixConfig.setPartitionGroup(partitionGroup.config());
-    return this;
+  AtomixBuilder(final ClusterConfig clusterConfig) {
+    super(clusterConfig);
+    clsuterConfig = requireNonNull(clusterConfig);
   }
 
   @Override
@@ -191,6 +155,6 @@ public class AtomixBuilder extends AtomixClusterBuilder {
    */
   @Override
   public Atomix build() {
-    return new Atomix(atomixConfig);
+    return new Atomix(clsuterConfig);
   }
 }

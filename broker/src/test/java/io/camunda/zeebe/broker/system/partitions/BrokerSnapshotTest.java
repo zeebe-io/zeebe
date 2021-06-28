@@ -46,7 +46,7 @@ public class BrokerSnapshotTest {
         (RaftPartition)
             brokerRule
                 .getBroker()
-                .getClusterServices()
+                .getPartitionManager()
                 .getPartitionGroup()
                 .getPartition(PartitionId.from(AtomixFactory.GROUP_NAME, PARTITION_ID));
     journalReader = raftPartition.getServer().openReader(Mode.COMMITS);

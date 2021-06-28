@@ -15,6 +15,7 @@
  */
 package io.atomix.core;
 
+import io.atomix.cluster.ClusterConfig;
 import io.atomix.cluster.Node;
 import io.atomix.cluster.discovery.BootstrapDiscoveryProvider;
 import io.atomix.utils.net.Address;
@@ -50,6 +51,7 @@ public final class AtomixRule extends ExternalResource {
     return temporaryFolder.apply(super.apply(base, description), description);
   }
 
+  @Override
   public void before() throws IOException {
     dataDir = temporaryFolder.newFolder();
     addressMap = new HashMap<>();
@@ -88,7 +90,7 @@ public final class AtomixRule extends ExternalResource {
                 })
             .collect(Collectors.toList());
 
-    return Atomix.builder(new AtomixConfig())
+    return Atomix.builder(new ClusterConfig())
         .withClusterId("test")
         .withMemberId(String.valueOf(id))
         .withHost("localhost")

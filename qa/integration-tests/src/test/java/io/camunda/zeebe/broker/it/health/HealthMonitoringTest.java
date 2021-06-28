@@ -27,7 +27,8 @@ public class HealthMonitoringTest {
   private final EmbeddedBrokerRule embeddedBrokerRule = new EmbeddedBrokerRule();
   private final Timeout timeout = Timeout.seconds(120);
 
-  @Rule public final RuleChain chain = RuleChain.outerRule(timeout).around(embeddedBrokerRule);
+  @Rule public final RuleChain chain = RuleChain.outerRule(timeout).around(
+      embeddedBrokerRule);
 
   @Test
   public void shouldReportUnhealthyWhenRaftInactive() {
@@ -39,7 +40,7 @@ public class HealthMonitoringTest {
     final var raftPartition =
         (RaftPartition)
             leader
-                .getClusterServices()
+                .getPartitionManager()
                 .getPartitionGroup()
                 .getPartition(PartitionId.from(GROUP_NAME, START_PARTITION_ID));
     raftPartition.getServer().stop();

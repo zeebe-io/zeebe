@@ -20,6 +20,7 @@ import io.atomix.utils.net.Address;
 import io.camunda.zeebe.broker.bootstrap.CloseProcess;
 import io.camunda.zeebe.broker.bootstrap.StartProcess;
 import io.camunda.zeebe.broker.clustering.ClusterServices;
+import io.camunda.zeebe.broker.clustering.PartitionManager;
 import io.camunda.zeebe.broker.clustering.atomix.AtomixFactory;
 import io.camunda.zeebe.broker.clustering.topology.TopologyManagerImpl;
 import io.camunda.zeebe.broker.clustering.topology.TopologyPartitionListenerImpl;
@@ -74,7 +75,6 @@ import io.camunda.zeebe.engine.processing.streamprocessor.ProcessingContext;
 import io.camunda.zeebe.engine.state.mutable.MutableZeebeState;
 import io.camunda.zeebe.logstreams.log.LogStream;
 import io.camunda.zeebe.protocol.impl.encoding.BrokerInfo;
-import io.camunda.zeebe.snapshots.SnapshotStoreSupplier;
 import io.camunda.zeebe.snapshots.impl.FileBasedSnapshotStoreFactory;
 import io.camunda.zeebe.transport.TransportFactory;
 import io.camunda.zeebe.util.LogUtil;
@@ -132,11 +132,11 @@ public final class Broker implements AutoCloseable {
   private final List<DiskSpaceUsageListener> diskSpaceUsageListeners = new ArrayList<>();
   private final SpringBrokerBridge springBrokerBridge;
   private DiskSpaceUsageMonitor diskSpaceUsageMonitor;
-  private SnapshotStoreSupplier snapshotStoreSupplier;
   private final List<ZeebePartition> partitions = new ArrayList<>();
   private BrokerAdminService brokerAdminService;
 
   private final TestCompanionClass testCompanionObject = new TestCompanionClass();
+  private PartitionManager partitionManager;
 
   public Broker(final SystemContext systemContext, final SpringBrokerBridge springBrokerBridge) {
     brokerContext = systemContext;
@@ -232,11 +232,12 @@ public final class Broker implements AutoCloseable {
             return embeddedGatewayService;
           });
     }
-    startContext.addStep("monitoring services", () -> monitoringServerStep(localBroker));
+
     startContext.addStep("disk space monitor", () -> diskSpaceMonitorStep(brokerCfg.getData()));
     startContext.addStep(
         "leader management request handler", () -> managementRequestStep(localBroker));
     startContext.addStep("zeebe partitions", () -> partitionsStep(brokerCfg, localBroker));
+    startContext.addStep("monitoring services", () -> monitoringServerStep(localBroker));
     startContext.addStep("register diskspace usage listeners", this::addDiskSpaceUsageListeners);
     startContext.addStep("upgrade manager", this::addBrokerAdminService);
 
@@ -259,10 +260,7 @@ public final class Broker implements AutoCloseable {
   }
 
   private AutoCloseable atomixCreateStep(final BrokerCfg brokerCfg, final BrokerInfo localBroker) {
-    final var snapshotStoreFactory =
-        new FileBasedSnapshotStoreFactory(scheduler, localBroker.getNodeId());
-    snapshotStoreSupplier = snapshotStoreFactory;
-    final var atomix = AtomixFactory.fromConfiguration(brokerCfg, snapshotStoreFactory);
+    final var atomix = AtomixFactory.fromConfiguration(brokerCfg);
     testCompanionObject.atomix = atomix;
     clusterServices = new ClusterServices(atomix);
 
@@ -347,7 +345,7 @@ public final class Broker implements AutoCloseable {
 
   private AutoCloseable monitoringServerStep(final BrokerInfo localBroker) {
     healthCheckService =
-        new BrokerHealthCheckService(localBroker, clusterServices.getPartitionGroup());
+        new BrokerHealthCheckService(localBroker, partitionManager.getPartitionGroup());
     springBrokerBridge.registerBrokerHealthCheckServiceSupplier(() -> healthCheckService);
     partitionListeners.add(healthCheckService);
     scheduleActor(healthCheckService);
@@ -380,7 +378,19 @@ public final class Broker implements AutoCloseable {
 
   private AutoCloseable partitionsStep(final BrokerCfg brokerCfg, final BrokerInfo localBroker)
       throws Exception {
-    final ManagedPartitionGroup partitionGroup = clusterServices.getPartitionGroup();
+    final var snapshotStoreFactory =
+        new FileBasedSnapshotStoreFactory(scheduler, localBroker.getNodeId());
+
+    partitionManager =
+        new PartitionManager(
+            brokerCfg,
+            snapshotStoreFactory,
+            clusterServices.getMembershipService(),
+            clusterServices.getCommunicationService());
+
+    partitionManager.start();
+
+    final ManagedPartitionGroup partitionGroup = partitionManager.getPartitionGroup();
 
     final MemberId nodeId = clusterServices.getMembershipService().getLocalMember().id();
 
@@ -411,7 +421,7 @@ public final class Broker implements AutoCloseable {
                     scheduler,
                     brokerCfg,
                     commandHandler,
-                    snapshotStoreSupplier,
+                    snapshotStoreFactory,
                     createFactory(
                         topologyManager,
                         brokerCfg.getCluster(),
@@ -436,7 +446,12 @@ public final class Broker implements AutoCloseable {
             };
           });
     }
-    return partitionStartProcess.start();
+
+    final var partitionStartProcessClosable = partitionStartProcess.start();
+    return () -> {
+      partitionStartProcessClosable.close();
+      partitionManager.stop();
+    };
   }
 
   private ExporterRepository buildExporterRepository(final BrokerCfg cfg) {
@@ -544,6 +559,10 @@ public final class Broker implements AutoCloseable {
 
   public SystemContext getBrokerContext() {
     return brokerContext;
+  }
+
+  public PartitionManager getPartitionManager() {
+    return partitionManager;
   }
 
   @Deprecated // only used for test; temporary work around

@@ -12,7 +12,6 @@ import io.atomix.cluster.messaging.ClusterCommunicationService;
 import io.atomix.cluster.messaging.ClusterEventService;
 import io.atomix.cluster.messaging.MessagingService;
 import io.atomix.core.Atomix;
-import io.atomix.primitive.partition.ManagedPartitionGroup;
 import java.util.concurrent.CompletableFuture;
 
 public final class ClusterServices {
@@ -45,9 +44,5 @@ public final class ClusterServices {
 
   public ClusterCommunicationService getCommunicationService() {
     return atomix.getCommunicationService();
-  }
-
-  public ManagedPartitionGroup getPartitionGroup() {
-    return atomix.getPartitionGroup();
   }
 }

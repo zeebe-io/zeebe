@@ -16,30 +16,19 @@
  */
 package io.atomix.core;
 
-import static com.google.common.base.MoreObjects.toStringHelper;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.io.Resources;
 import io.atomix.cluster.AtomixCluster;
-import io.atomix.cluster.ClusterMembershipService;
-import io.atomix.cluster.messaging.ClusterCommunicationService;
+import io.atomix.cluster.ClusterConfig;
 import io.atomix.cluster.messaging.ManagedMessagingService;
 import io.atomix.cluster.messaging.ManagedUnicastService;
-import io.atomix.primitive.partition.ManagedPartitionGroup;
-import io.atomix.primitive.partition.ManagedPartitionService;
-import io.atomix.primitive.partition.PartitionGroupConfig;
-import io.atomix.primitive.partition.impl.DefaultPartitionService;
 import io.atomix.utils.Version;
 import io.atomix.utils.concurrent.Futures;
-import io.atomix.utils.concurrent.SingleThreadContext;
-import io.atomix.utils.concurrent.ThreadContext;
-import io.atomix.utils.concurrent.Threads;
 import io.atomix.utils.config.ConfigurationException;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -91,33 +80,15 @@ public class Atomix extends AtomixCluster {
     VERSION = BUILD.trim().length() > 0 ? Version.from(BUILD.trim().split("\\s+")[0]) : null;
   }
 
-  private final ScheduledExecutorService executorService;
-  private final ManagedPartitionService partitions;
-  private final ThreadContext threadContext = new SingleThreadContext("atomix-%d");
-  private final ManagedPartitionGroup partitionGroup;
-
-  protected Atomix(final AtomixConfig config) {
+  protected Atomix(final ClusterConfig config) {
     this(config, null, null);
   }
 
   protected Atomix(
-      final AtomixConfig config,
+      final ClusterConfig config,
       final ManagedMessagingService messagingService,
       final ManagedUnicastService unicastService) {
-    super(config.getClusterConfig(), VERSION, messagingService, unicastService);
-    executorService =
-        Executors.newScheduledThreadPool(
-            Math.max(Math.min(Runtime.getRuntime().availableProcessors() * 2, 8), 4),
-            Threads.namedThreads("atomix-primitive-%d", LOGGER));
-
-    final PartitionGroupConfig<?> partitionGroupConfig = config.getPartitionGroup();
-
-    partitionGroup =
-        partitionGroupConfig != null
-            ? partitionGroupConfig.getType().newPartitionGroup(partitionGroupConfig)
-            : null;
-
-    partitions = buildPartitionService(config, getMembershipService(), getCommunicationService());
+    super(config, VERSION, messagingService, unicastService);
   }
 
   /**
@@ -129,7 +100,7 @@ public class Atomix extends AtomixCluster {
    * @return a new Atomix builder
    */
   public static AtomixBuilder builder() {
-    return builder(new AtomixConfig());
+    return builder(new ClusterConfig());
   }
 
   /**
@@ -140,12 +111,8 @@ public class Atomix extends AtomixCluster {
    * @param config the Atomix configuration
    * @return the Atomix builder
    */
-  public static AtomixBuilder builder(final AtomixConfig config) {
+  public static AtomixBuilder builder(final ClusterConfig config) {
     return new AtomixBuilder(config);
-  }
-
-  public ManagedPartitionGroup getPartitionGroup() {
-    return partitionGroup;
   }
 
   /**
@@ -167,41 +134,5 @@ public class Atomix extends AtomixCluster {
 
     LOGGER.info(BUILD);
     return super.start();
-  }
-
-  @Override
-  protected CompletableFuture<Void> startServices() {
-    return super.startServices()
-        .thenComposeAsync(v -> partitions.start(), threadContext)
-        .thenApply(v -> null);
-  }
-
-  @Override
-  protected CompletableFuture<Void> stopServices() {
-    return partitions
-        .stop()
-        .exceptionally(e -> null)
-        .thenComposeAsync(v -> super.stopServices(), threadContext);
-  }
-
-  @Override
-  protected CompletableFuture<Void> completeShutdown() {
-    executorService.shutdownNow();
-    threadContext.close();
-    return super.completeShutdown();
-  }
-
-  @Override
-  public String toString() {
-    return toStringHelper(this).add("partitionGroup", partitionGroup).toString();
-  }
-
-  /** Builds a partition service. */
-  private ManagedPartitionService buildPartitionService(
-      final AtomixConfig config,
-      final ClusterMembershipService clusterMembershipService,
-      final ClusterCommunicationService messagingService) {
-
-    return new DefaultPartitionService(clusterMembershipService, messagingService, partitionGroup);
   }
 }

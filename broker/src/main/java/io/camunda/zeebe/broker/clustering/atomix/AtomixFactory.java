@@ -7,6 +7,7 @@
  */
 package io.camunda.zeebe.broker.clustering.atomix;
 
+import io.atomix.cluster.ClusterConfig;
 import io.atomix.cluster.Node;
 import io.atomix.cluster.discovery.BootstrapDiscoveryBuilder;
 import io.atomix.cluster.discovery.BootstrapDiscoveryProvider;
@@ -15,18 +16,12 @@ import io.atomix.cluster.protocol.GroupMembershipProtocol;
 import io.atomix.cluster.protocol.SwimMembershipProtocol;
 import io.atomix.core.Atomix;
 import io.atomix.core.AtomixBuilder;
-import io.atomix.core.AtomixConfig;
-import io.atomix.raft.partition.RaftPartitionGroup;
-import io.atomix.raft.partition.RaftPartitionGroup.Builder;
 import io.atomix.utils.net.Address;
 import io.camunda.zeebe.broker.Loggers;
 import io.camunda.zeebe.broker.system.configuration.BrokerCfg;
 import io.camunda.zeebe.broker.system.configuration.ClusterCfg;
 import io.camunda.zeebe.broker.system.configuration.DataCfg;
 import io.camunda.zeebe.broker.system.configuration.MembershipCfg;
-import io.camunda.zeebe.broker.system.configuration.NetworkCfg;
-import io.camunda.zeebe.logstreams.impl.log.ZeebeEntryValidator;
-import io.camunda.zeebe.snapshots.ReceivableSnapshotStoreFactory;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -41,8 +36,7 @@ public final class AtomixFactory {
 
   private AtomixFactory() {}
 
-  public static Atomix fromConfiguration(
-      final BrokerCfg configuration, final ReceivableSnapshotStoreFactory snapshotStoreFactory) {
+  public static Atomix fromConfiguration(final BrokerCfg configuration) {
     final var clusterCfg = configuration.getCluster();
     final var nodeId = clusterCfg.getNodeId();
     final var localMemberId = Integer.toString(nodeId);
@@ -67,7 +61,7 @@ public final class AtomixFactory {
             .build();
 
     final AtomixBuilder atomixBuilder =
-        Atomix.builder(new AtomixConfig())
+        Atomix.builder(new ClusterConfig())
             .withClusterId(clusterCfg.getClusterName())
             .withMemberId(localMemberId)
             .withMembershipProtocol(membershipProtocol)
@@ -83,63 +77,7 @@ public final class AtomixFactory {
     final String rootDirectory = dataConfiguration.getDirectory();
     IoUtil.ensureDirectoryExists(new File(rootDirectory), "Zeebe data directory");
 
-    final RaftPartitionGroup partitionGroup =
-        createRaftPartitionGroup(configuration, rootDirectory, snapshotStoreFactory);
-
-    return atomixBuilder.withPartitionGroup(partitionGroup).build();
-  }
-
-  private static RaftPartitionGroup createRaftPartitionGroup(
-      final BrokerCfg configuration,
-      final String rootDirectory,
-      final ReceivableSnapshotStoreFactory snapshotStoreFactory) {
-
-    final File raftDirectory = new File(rootDirectory, AtomixFactory.GROUP_NAME);
-    IoUtil.ensureDirectoryExists(raftDirectory, "Raft data directory");
-
-    final ClusterCfg clusterCfg = configuration.getCluster();
-    final var experimentalCfg = configuration.getExperimental();
-    final DataCfg dataCfg = configuration.getData();
-    final NetworkCfg networkCfg = configuration.getNetwork();
-
-    final Builder partitionGroupBuilder =
-        RaftPartitionGroup.builder(AtomixFactory.GROUP_NAME)
-            .withNumPartitions(clusterCfg.getPartitionsCount())
-            .withPartitionSize(clusterCfg.getReplicationFactor())
-            .withMembers(getRaftGroupMembers(clusterCfg))
-            .withDataDirectory(raftDirectory)
-            .withSnapshotStoreFactory(snapshotStoreFactory)
-            .withMaxAppendBatchSize((int) experimentalCfg.getMaxAppendBatchSizeInBytes())
-            .withMaxAppendsPerFollower(experimentalCfg.getMaxAppendsPerFollower())
-            .withEntryValidator(new ZeebeEntryValidator())
-            .withFlushExplicitly(!experimentalCfg.isDisableExplicitRaftFlush())
-            .withFreeDiskSpace(dataCfg.getFreeDiskSpaceReplicationWatermark())
-            .withJournalIndexDensity(dataCfg.getLogIndexDensity())
-            .withPriorityElection(experimentalCfg.isEnablePriorityElection());
-
-    final int maxMessageSize = (int) networkCfg.getMaxMessageSizeInBytes();
-
-    final var segmentSize = dataCfg.getLogSegmentSizeInBytes();
-    if (segmentSize < maxMessageSize) {
-      throw new IllegalArgumentException(
-          String.format(
-              "Expected the raft segment size greater than the max message size of %s, but was %s.",
-              maxMessageSize, segmentSize));
-    }
-
-    partitionGroupBuilder.withSegmentSize(segmentSize);
-
-    return partitionGroupBuilder.build();
-  }
-
-  private static List<String> getRaftGroupMembers(final ClusterCfg clusterCfg) {
-    final int clusterSize = clusterCfg.getClusterSize();
-    // node ids are always 0 to clusterSize - 1
-    final List<String> members = new ArrayList<>();
-    for (int i = 0; i < clusterSize; i++) {
-      members.add(Integer.toString(i));
-    }
-    return members;
+    return atomixBuilder.build();
   }
 
   private static NodeDiscoveryProvider createDiscoveryProvider(
