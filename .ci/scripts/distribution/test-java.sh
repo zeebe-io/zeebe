@@ -25,7 +25,7 @@ if [ ! -z "$JUNIT_THREAD_COUNT" ]; then
   MAVEN_PROPERTIES+=("-DjunitThreadCount=$JUNIT_THREAD_COUNT")
 fi
 
-mvn -o -B --fail-never -T${MAVEN_PARALLELISM} -s ${MAVEN_SETTINGS_XML} -pl clients/java \
+mvn -o -B --fail-never -T${MAVEN_PARALLELISM} -s ${MAVEN_SETTINGS_XML} \
  -P parallel-tests,extract-flaky-tests "${MAVEN_PROPERTIES[@]}" \
  verify | tee ${tmpfile}
 status=${PIPESTATUS[0]}
