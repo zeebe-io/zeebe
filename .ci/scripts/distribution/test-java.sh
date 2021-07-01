@@ -25,8 +25,9 @@ if [ ! -z "$JUNIT_THREAD_COUNT" ]; then
   MAVEN_PROPERTIES+=("-DjunitThreadCount=$JUNIT_THREAD_COUNT")
 fi
 
-mvn -o -B --fail-never -T${MAVEN_PARALLELISM} -s ${MAVEN_SETTINGS_XML} -P skip-random-tests,parallel-tests "${MAVEN_PROPERTIES[@]}" \
-  verify io.zeebe:flaky-test-extractor-maven-plugin:extract-flaky-tests | tee ${tmpfile}
+mvn -o -B --fail-never -T${MAVEN_PARALLELISM} -s ${MAVEN_SETTINGS_XML} -pl clients/java \
+ -P parallel-tests,extract-flaky-tests "${MAVEN_PROPERTIES[@]}" \
+ verify | tee ${tmpfile}
 status=${PIPESTATUS[0]}
 
 # delay checking the maven status after we've analysed flaky tests

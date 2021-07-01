@@ -1681,5 +1681,38 @@
         </plugins>
       </build>
     </profile>
+
+    <!--
+      profile to enable flaky test analysis/extraction; running this module will extract flaky runs
+      from your failed test cases as their own test case, such that the failed results can be viewed
+      in Jenkins
+      -->
+    <profile>
+      <id>extract-flaky-tests</id>
+
+      <properties>
+        <flaky.test.reportDir>surefire-reports</flaky.test.reportDir>
+      </properties>
+
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>io.zeebe</groupId>
+            <artifactId>flaky-test-extractor-maven-plugin</artifactId>
+            <configuration>
+              <reportDir>${project.build.directory}/${flaky.test.reportDir}</reportDir>
+            </configuration>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>extract-flaky-tests</goal>
+                </goals>
+                <phase>post-integration-test</phase>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
   </profiles>
 </project>

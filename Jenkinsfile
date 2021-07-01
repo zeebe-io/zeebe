@@ -440,7 +440,7 @@ pipeline {
                         org.camunda.helper.CIAnalytics.trackBuildStatus(this, 'flaky-tests', flakyTestCase)
                     }
                 } else {
-                    org.camunda.helper.CIAnalytics.trackBuildStatus(this, currentBuild.currentResult)
+                    org.camunda.helper.CIAnalytics.trackBuildStatus(this, currentBuild.result)
                 }
             }
         }

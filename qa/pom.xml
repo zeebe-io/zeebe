@@ -18,18 +18,6 @@
   </modules>
 
   <build>
-    <pluginManagement>
-      <plugins>
-        <plugin>
-          <groupId>io.zeebe</groupId>
-          <artifactId>flaky-test-extractor-maven-plugin</artifactId>
-          <configuration>
-            <reportDir>${project.build.directory}/failsafe-reports</reportDir>
-          </configuration>
-        </plugin>
-      </plugins>
-    </pluginManagement>
-
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
