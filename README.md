@@ -2,6 +2,7 @@
 
 
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.camunda.zeebe/camunda-cloud-zeebe/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.camunda.zeebe/camunda-cloud-zeebe)
+[![Maintainability](https://cloud.quality-gate.com/dashboard/api/badge?projectName=zeebe-io_zeebe&branchName=develop)](https://cloud.quality-gate.com/dashboard/branches/860#overview)
 
 Zeebe provides visibility into and control over business processes that span multiple microservices. It is the engine that powers [Camunda Cloud](https://camunda.com/products/cloud/workflow-engine/).
 
