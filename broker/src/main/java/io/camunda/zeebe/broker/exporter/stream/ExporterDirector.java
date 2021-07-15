@@ -283,7 +283,7 @@ public final class ExporterDirector extends Actor implements HealthMonitorable, 
   }
 
   private void sendExporterState() {
-    final var exportPositionsMessage = new ExportPositionsMessage();
+    final var exportPositionsMessage = new ExporterPositionsMessage();
     state.visitPositions(exportPositionsMessage::putExporter);
 
     partitionMessagingService.broadcast(

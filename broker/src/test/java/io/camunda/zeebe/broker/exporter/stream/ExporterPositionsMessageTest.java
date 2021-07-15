@@ -17,7 +17,7 @@ public class ExporterPositionsMessageTest {
   @Test
   public void shouldEncodeExporterPositions() {
     // given
-    final var exportPositionsMessage = new ExportPositionsMessage();
+    final var exportPositionsMessage = new ExporterPositionsMessage();
     exportPositionsMessage.putExporter("elasticsearch", 1001);
     exportPositionsMessage.putExporter("metrics", 95);
     final var length = exportPositionsMessage.getLength();
@@ -37,7 +37,7 @@ public class ExporterPositionsMessageTest {
   @Test
   public void shouldDecodeExporterPositions() {
     // given
-    final var exportPositionsMessage = new ExportPositionsMessage();
+    final var exportPositionsMessage = new ExporterPositionsMessage();
     exportPositionsMessage.putExporter("elasticsearch", 1001);
     exportPositionsMessage.putExporter("metrics", 95);
     final var length = exportPositionsMessage.getLength();
@@ -45,7 +45,7 @@ public class ExporterPositionsMessageTest {
     exportPositionsMessage.write(buffer, 0);
 
     // when
-    final var otherMessage = new ExportPositionsMessage();
+    final var otherMessage = new ExporterPositionsMessage();
     otherMessage.wrap(buffer, 0, length);
 
     // then
