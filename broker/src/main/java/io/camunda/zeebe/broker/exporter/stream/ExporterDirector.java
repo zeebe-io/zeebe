@@ -205,7 +205,12 @@ public final class ExporterDirector extends Actor implements HealthMonitorable, 
 
   @Override
   protected void handleFailure(final Exception failure) {
-    LOG.error("Actor '{}' failed in phase {} with: {} .", name, actor.getLifecyclePhase(), failure);
+    LOG.error(
+        "Actor '{}' failed in phase {} with: {} .",
+        name,
+        actor.getLifecyclePhase(),
+        failure,
+        failure);
     actor.fail();
 
     if (failure instanceof UnrecoverableException) {
