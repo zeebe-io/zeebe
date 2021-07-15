@@ -21,6 +21,7 @@ public final class ExporterDirectorContext {
   private Collection<ExporterDescriptor> descriptors;
   private ZeebeDb zeebeDb;
   private PartitionMessagingService partitionMessagingService;
+  private ExporterMode exporterMode = ExporterMode.ACTIVE; // per default we export records
 
   public int getId() {
     return id;
@@ -44,6 +45,10 @@ public final class ExporterDirectorContext {
 
   public PartitionMessagingService getPartitionMessagingService() {
     return partitionMessagingService;
+  }
+
+  public ExporterMode getExporterMode() {
+    return exporterMode;
   }
 
   public ExporterDirectorContext id(final int id) {
@@ -75,5 +80,23 @@ public final class ExporterDirectorContext {
       final PartitionMessagingService messagingService) {
     partitionMessagingService = messagingService;
     return this;
+  }
+
+  public ExporterDirectorContext exporterMode(final ExporterMode exporterMode) {
+    this.exporterMode = exporterMode;
+    return this;
+  }
+
+  public enum ExporterMode {
+    /**
+     * ACTIVE, means it is actively running the exporting and distributes the exporter positions to
+     * the followers. This mode is used on the leader side.
+     */
+    ACTIVE, // default, used on Leaders
+    /**
+     * PASSIVE, means it is not actively exporting records. It is consuming the distributed exporter
+     * positions and stores them in the state. This mode is used on the follower side.
+     */
+    PASSIVE
   }
 }

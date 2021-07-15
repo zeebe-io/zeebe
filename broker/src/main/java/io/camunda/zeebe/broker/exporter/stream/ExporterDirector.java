@@ -8,6 +8,7 @@
 package io.camunda.zeebe.broker.exporter.stream;
 
 import io.camunda.zeebe.broker.Loggers;
+import io.camunda.zeebe.broker.exporter.stream.ExporterDirectorContext.ExporterMode;
 import io.camunda.zeebe.broker.system.partitions.PartitionMessagingService;
 import io.camunda.zeebe.db.ZeebeDb;
 import io.camunda.zeebe.engine.processing.streamprocessor.EventFilter;
@@ -76,6 +77,7 @@ public final class ExporterDirector extends Actor implements HealthMonitorable, 
   private ExporterPhase exporterPhase;
   private final PartitionMessagingService partitionMessagingService;
   private final String exporterPositionsTopic;
+  private final ExporterMode exporterMode;
 
   public ExporterDirector(final ExporterDirectorContext context, final boolean shouldPauseOnStart) {
     name = context.getName();
@@ -92,6 +94,7 @@ public final class ExporterDirector extends Actor implements HealthMonitorable, 
     isPaused = shouldPauseOnStart;
     partitionMessagingService = context.getPartitionMessagingService();
     exporterPositionsTopic = String.format(EXPORTER_STATE_TOPIC_FORMAT, partitionId);
+    exporterMode = context.getExporterMode();
   }
 
   public ActorFuture<Void> startAsync(final ActorSchedulingService actorSchedulingService) {
@@ -158,13 +161,9 @@ public final class ExporterDirector extends Actor implements HealthMonitorable, 
       LOG.debug("Recovering exporter from snapshot");
       recoverFromSnapshot();
 
-      for (final ExporterContainer container : containers) {
-        container.initContainer(actor, metrics, state);
-        container.configureExporter();
+      if (exporterMode == ExporterMode.ACTIVE) {
+        initActiveExportingMode();
       }
-
-      eventFilter = createEventFilter(containers);
-      LOG.debug("Set event filter for exporters: {}", eventFilter);
 
     } catch (final Exception e) {
       onFailure();
@@ -172,7 +171,15 @@ public final class ExporterDirector extends Actor implements HealthMonitorable, 
     }
 
     isOpened.set(true);
-    onSnapshotRecovered();
+
+    // remove exporters from state
+    // which are no longer in our configuration
+    clearExporterState();
+    if (exporterMode == ExporterMode.ACTIVE) {
+      startActiveExportingMode();
+    } else {
+      // start passive Mode
+    }
   }
 
   @Override
@@ -211,6 +218,16 @@ public final class ExporterDirector extends Actor implements HealthMonitorable, 
         listener.onFailure();
       }
     }
+  }
+
+  private void initActiveExportingMode() throws Exception {
+    for (final ExporterContainer container : containers) {
+      container.initContainer(actor, metrics, state);
+      container.configureExporter();
+    }
+
+    eventFilter = createEventFilter(containers);
+    LOG.debug("Set event filter for exporters: {}", eventFilter);
   }
 
   private void recoverFromSnapshot() {
@@ -256,7 +273,7 @@ public final class ExporterDirector extends Actor implements HealthMonitorable, 
     actor.close();
   }
 
-  private void onSnapshotRecovered() {
+  private void startActiveExportingMode() {
     logStream.registerRecordAvailableListener(this);
 
     // start reading
@@ -264,8 +281,6 @@ public final class ExporterDirector extends Actor implements HealthMonitorable, 
       container.initPosition();
       container.openExporter();
     }
-
-    clearExporterState();
 
     if (state.hasExporters()) {
       if (!isPaused) {
