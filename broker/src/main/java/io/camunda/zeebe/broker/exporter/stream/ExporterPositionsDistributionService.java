@@ -1,28 +1,42 @@
 package io.camunda.zeebe.broker.exporter.stream;
 
+import io.camunda.zeebe.broker.Loggers;
 import io.camunda.zeebe.broker.system.partitions.PartitionMessagingService;
+import java.nio.ByteBuffer;
 import java.util.concurrent.Executor;
 import java.util.function.BiConsumer;
+import org.agrona.concurrent.UnsafeBuffer;
 
 public class ExporterPositionsDistributionService implements AutoCloseable {
 
-  private final ExporterPositionsMessageConsumer exporterPositionsMessageConsumer;
   private final PartitionMessagingService partitionMessagingService;
   private final String exporterPositionsTopic;
+  private final BiConsumer<String, Long> exporterPositionConsumer;
 
   public ExporterPositionsDistributionService(
       final BiConsumer<String, Long> exporterPositionConsumer,
       final PartitionMessagingService partitionMessagingService,
       final String exporterTopic) {
-    exporterPositionsMessageConsumer =
-        new ExporterPositionsMessageConsumer(exporterPositionConsumer);
+    this.exporterPositionConsumer = exporterPositionConsumer;
     this.partitionMessagingService = partitionMessagingService;
     exporterPositionsTopic = exporterTopic;
   }
 
   public void subscribeForExporterPositions(final Executor executor) {
     partitionMessagingService.subscribe(
-        exporterPositionsTopic, exporterPositionsMessageConsumer, executor);
+        exporterPositionsTopic, this::storeExporterPositions, executor);
+  }
+
+  private void storeExporterPositions(final ByteBuffer byteBuffer) {
+    final var readBuffer = new UnsafeBuffer(byteBuffer);
+    final var exportPositionsMessage = new ExporterPositionsMessage();
+    exportPositionsMessage.wrap(readBuffer, 0, readBuffer.capacity());
+
+    final var exporterPositions = exportPositionsMessage.getExporterPositions();
+
+    Loggers.EXPORTER_LOGGER.debug("Received new exporter state {}", exporterPositions);
+
+    exporterPositions.forEach(exporterPositionConsumer);
   }
 
   public void publishExporterPositions(final ExporterPositionsMessage exporterPositionsMessage) {
