@@ -11,6 +11,7 @@ import static org.mockito.Mockito.spy;
 
 import io.camunda.zeebe.broker.exporter.repo.ExporterDescriptor;
 import io.camunda.zeebe.broker.exporter.stream.ExporterDirectorContext.ExporterMode;
+import io.camunda.zeebe.broker.system.partitions.PartitionMessagingService;
 import io.camunda.zeebe.db.ZeebeDb;
 import io.camunda.zeebe.db.ZeebeDbFactory;
 import io.camunda.zeebe.engine.state.DefaultZeebeDbFactory;
@@ -48,6 +49,7 @@ public final class ExporterRule implements TestRule {
   private ZeebeDb<ZbColumnFamilies> capturedZeebeDb;
 
   private TestStreams streams;
+  private PartitionMessagingService partitionMessagingService;
   private ExporterDirector director;
   private final ExporterMode exporterMode;
 
@@ -68,6 +70,12 @@ public final class ExporterRule implements TestRule {
     return new ExporterRule(ExporterMode.PASSIVE);
   }
 
+  public ExporterRule withPartitionMessageService(
+      final PartitionMessagingService partitionMessagingService) {
+    this.partitionMessagingService = partitionMessagingService;
+    return this;
+  }
+
   @Override
   public Statement apply(final Statement base, final Description description) {
     return chain.apply(base, description);
@@ -85,6 +93,7 @@ public final class ExporterRule implements TestRule {
             .logStream(stream.getAsyncLogStream())
             .zeebeDb(capturedZeebeDb)
             .exporterMode(exporterMode)
+            .partitionMessagingService(partitionMessagingService)
             .descriptors(exporterDescriptors);
 
     director = new ExporterDirector(context, false);
