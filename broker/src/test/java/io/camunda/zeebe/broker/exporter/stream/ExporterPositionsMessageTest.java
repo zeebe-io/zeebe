@@ -5,11 +5,10 @@
  * Licensed under the Zeebe Community License 1.1. You may not use this file
  * except in compliance with the Zeebe Community License 1.1.
  */
-package io.camunda.zeebe.broker.exporter;
+package io.camunda.zeebe.broker.exporter.stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.camunda.zeebe.broker.exporter.stream.ExportPositionsMessage;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Test;
 
