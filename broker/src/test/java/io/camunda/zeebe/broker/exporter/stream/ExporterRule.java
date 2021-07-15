@@ -10,6 +10,7 @@ package io.camunda.zeebe.broker.exporter.stream;
 import static org.mockito.Mockito.spy;
 
 import io.camunda.zeebe.broker.exporter.repo.ExporterDescriptor;
+import io.camunda.zeebe.broker.exporter.stream.ExporterDirectorContext.ExporterMode;
 import io.camunda.zeebe.db.ZeebeDb;
 import io.camunda.zeebe.db.ZeebeDbFactory;
 import io.camunda.zeebe.engine.state.DefaultZeebeDbFactory;
@@ -48,13 +49,23 @@ public final class ExporterRule implements TestRule {
 
   private TestStreams streams;
   private ExporterDirector director;
+  private final ExporterMode exporterMode;
 
-  public ExporterRule() {
+  private ExporterRule(final ExporterMode exporterMode) {
+    this.exporterMode = exporterMode;
     final SetupRule rule = new SetupRule(PARTITION_ID);
 
     zeebeDbFactory = DefaultZeebeDbFactory.defaultFactory();
     chain =
         RuleChain.outerRule(tempFolder).around(actorSchedulerRule).around(closeables).around(rule);
+  }
+
+  public static ExporterRule activeExporter() {
+    return new ExporterRule(ExporterMode.ACTIVE);
+  }
+
+  public static ExporterRule passiveExporter() {
+    return new ExporterRule(ExporterMode.PASSIVE);
   }
 
   @Override
@@ -73,6 +84,7 @@ public final class ExporterRule implements TestRule {
             .name(PROCESSOR_NAME)
             .logStream(stream.getAsyncLogStream())
             .zeebeDb(capturedZeebeDb)
+            .exporterMode(exporterMode)
             .descriptors(exporterDescriptors);
 
     director = new ExporterDirector(context, false);
