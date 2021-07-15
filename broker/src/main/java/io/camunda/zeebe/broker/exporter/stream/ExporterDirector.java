@@ -78,6 +78,7 @@ public final class ExporterDirector extends Actor implements HealthMonitorable, 
   private final PartitionMessagingService partitionMessagingService;
   private final String exporterPositionsTopic;
   private final ExporterMode exporterMode;
+  private ExporterPositionsDistributionService exporterDistributionService;
 
   public ExporterDirector(final ExporterDirectorContext context, final boolean shouldPauseOnStart) {
     name = context.getName();
@@ -160,11 +161,13 @@ public final class ExporterDirector extends Actor implements HealthMonitorable, 
     try {
       LOG.debug("Recovering exporter from snapshot");
       recoverFromSnapshot();
+      exporterDistributionService =
+          new ExporterPositionsDistributionService(
+              state::setPosition, partitionMessagingService, exporterPositionsTopic);
 
       if (exporterMode == ExporterMode.ACTIVE) {
         initActiveExportingMode();
       }
-
     } catch (final Exception e) {
       onFailure();
       LangUtil.rethrowUnchecked(e);
@@ -177,8 +180,8 @@ public final class ExporterDirector extends Actor implements HealthMonitorable, 
     clearExporterState();
     if (exporterMode == ExporterMode.ACTIVE) {
       startActiveExportingMode();
-    } else {
-      // start passive Mode
+    } else { // PASSIVE, we consume the messages and set it in our state
+      exporterDistributionService.subscribeForExporterPositions(actor::submit);
     }
   }
 
@@ -300,9 +303,7 @@ public final class ExporterDirector extends Actor implements HealthMonitorable, 
   private void sendExporterState() {
     final var exportPositionsMessage = new ExporterPositionsMessage();
     state.visitPositions(exportPositionsMessage::putExporter);
-
-    partitionMessagingService.broadcast(
-        exporterPositionsTopic, exportPositionsMessage.toByteBuffer());
+    exporterDistributionService.publishExporterPositions(exportPositionsMessage);
   }
 
   private void skipRecord(final LoggedEvent currentEvent) {
