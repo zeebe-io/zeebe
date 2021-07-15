@@ -31,6 +31,7 @@ import org.junit.runners.model.Statement;
 
 public final class ExporterRule implements TestRule {
 
+  private static final int PARTITION_ID = 1;
   private static final int EXPORTER_PROCESSOR_ID = 101;
   private static final String PROCESSOR_NAME = "exporter";
   private static final String STREAM_NAME = "stream";
@@ -48,14 +49,10 @@ public final class ExporterRule implements TestRule {
   private TestStreams streams;
   private ExporterDirector director;
 
-  public ExporterRule(final int partitionId) {
-    this(partitionId, DefaultZeebeDbFactory.defaultFactory());
-  }
+  public ExporterRule() {
+    final SetupRule rule = new SetupRule(PARTITION_ID);
 
-  public ExporterRule(final int partitionId, final ZeebeDbFactory dbFactory) {
-    final SetupRule rule = new SetupRule(partitionId);
-
-    zeebeDbFactory = dbFactory;
+    zeebeDbFactory = DefaultZeebeDbFactory.defaultFactory();
     chain =
         RuleChain.outerRule(tempFolder).around(actorSchedulerRule).around(closeables).around(rule);
   }
@@ -65,7 +62,6 @@ public final class ExporterRule implements TestRule {
     return chain.apply(base, description);
   }
 
-  @SuppressWarnings("unchecked")
   public void startExporterDirector(final List<ExporterDescriptor> exporterDescriptors) {
     final var stream = streams.getLogStream(STREAM_NAME);
     final var runtimeFolder = streams.createRuntimeFolder(stream);
