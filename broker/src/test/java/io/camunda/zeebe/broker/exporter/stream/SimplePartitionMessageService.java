@@ -21,8 +21,10 @@ final class SimplePartitionMessageService implements PartitionMessagingService {
   @Override
   public void broadcast(final String subject, final ByteBuffer payload) {
     final var executorConsumerTuple = consumers.get(subject);
-    final var executor = executorConsumerTuple.getLeft();
-    executor.execute(() -> executorConsumerTuple.getRight().accept(payload));
+    if (executorConsumerTuple != null) {
+      final var executor = executorConsumerTuple.getLeft();
+      executor.execute(() -> executorConsumerTuple.getRight().accept(payload));
+    }
   }
 
   @Override

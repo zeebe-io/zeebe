@@ -49,7 +49,7 @@ public final class ExporterRule implements TestRule {
   private ZeebeDb<ZbColumnFamilies> capturedZeebeDb;
 
   private TestStreams streams;
-  private PartitionMessagingService partitionMessagingService;
+  private PartitionMessagingService partitionMessagingService = new SimplePartitionMessageService();
   private ExporterDirector director;
   private final ExporterMode exporterMode;
 
