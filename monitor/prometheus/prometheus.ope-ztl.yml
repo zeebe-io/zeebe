@@ -1,0 +1,27 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: "tasklist"
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["tasklist:8090"]
+
+  - job_name: "operate"
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["operate:8080"]
+
+  - job_name: "zeebe"
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["zeebe:9600"]
+
+  - job_name: "elasticsearch"
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["elasticsearch_exporter:9114"]

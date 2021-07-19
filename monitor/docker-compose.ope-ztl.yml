@@ -1,0 +1,118 @@
+version: '3.0'
+
+volumes:
+  grafana: { }
+  prometheus: { }
+
+services:
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.12.0
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - cluster.name=elasticsearch
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms1024m -Xmx1024m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - 9200:9200
+      - 9300:9300
+    restart: always
+
+  elasticsearch_exporter:
+    image: justwatch/elasticsearch_exporter:1.1.0
+    command: '--es.uri=http://elasticsearch:9200'
+    restart: always
+    ports:
+      - 9114:9114
+
+  zeebe:
+    container_name: zeebe
+    image: camunda/zeebe:1.0.0
+    environment:
+      - "JAVA_TOOL_OPTIONS=-Xms512m -Xmx512m"
+      - ZEEBE_BROKER_EXPORTERS_ELASTICSEARCH_CLASSNAME=io.camunda.zeebe.exporter.ElasticsearchExporter
+      - ZEEBE_BROKER_EXPORTERS_ELASTICSEARCH_ARGS_URL=http://elasticsearch:9200
+      - ZEEBE_BROKER_EXPORTERS_ELASTICSEARCH_ARGS_BULK_SIZE=1
+      - ZEEBE_BROKER_NETWORK_HOST=zeebe
+      - ZEEBE_BROKER_CLUSTER_PARTITIONS_COUNT=2
+      - ZEEBE_BROKER_GATEWAY_MONITORING_ENABLED=true
+    ports:
+      - 26500:26500
+      - 8000:8000
+      - 9600:9600
+    depends_on:
+      - elasticsearch
+    restart: always
+
+  tasklist:
+    image: camunda/tasklist:latest
+    ports:
+      - 8090:8090
+    environment:
+      - SERVER_PORT=8090
+      - SPRING_PROFILES_ACTIVE=dev,dev-data,auth
+      - CAMUNDA_TASKLIST_ELASTICSEARCH_CLUSTERNAME=docker-cluster
+      - CAMUNDA_TASKLIST_ELASTICSEARCH_URL=http://elasticsearch:9200
+      - CAMUNDA_TASKLIST_ZEEBEELASTICSEARCH_CLUSTERNAME=docker-cluster
+      - CAMUNDA_TASKLIST_ZEEBEELASTICSEARCH_PREFIX=zeebe-record
+      - CAMUNDA_TASKLIST_ZEEBEELASTICSEARCH_URL=http://elasticsearch:9200
+      - CAMUNDA_TASKLIST_ZEEBE_GATEWAYADDRESS=zeebe:26500
+      - CAMUNDA_TASKLIST_CSRFPREVENTIONENABLED=false
+      - GRAPHQL_PLAYGROUND_ENABLED=true
+      - GRAPHQL_PLAYGROUND_SETTINGS_REQUEST_CREDENTIALS=include
+    depends_on:
+      - elasticsearch
+      - zeebe
+    restart: always
+
+  operate:
+    image: camunda/operate:latest
+    ports:
+      - 8080:8080
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev,dev-data,auth
+      - CAMUNDA_OPERATE_ELASTICSEARCH_URL=http://elasticsearch:9200
+      - CAMUNDA_OPERATE_ELASTICSEARCH_CLUSTERNAME=docker-cluster
+      - CAMUNDA_OPERATE_ZEEBEELASTICSEARCH_URL=http://elasticsearch:9200
+      - CAMUNDA_OPERATE_ZEEBEELASTICSEARCH_PREFIX=zeebe-record
+      - CAMUNDA_OPERATE_ZEEBEELASTICSEARCH_CLUSTERNAME=docker-cluster
+      - CAMUNDA_OPERATE_ZEEBE_GATEWAYADDRESS=zeebe:26500
+    depends_on:
+      - elasticsearch
+      - zeebe
+    restart: always
+
+  prometheus:
+    image: prom/prometheus:v2.25.0
+    volumes:
+      - ./prometheus/:/etc/prometheus/
+      - prometheus:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.ope-ztl.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    ports:
+      - 9090:9090
+
+  grafana:
+    image: grafana/grafana:6.7.5
+    depends_on:
+      - prometheus
+    ports:
+      - 3000:3000
+    volumes:
+      - grafana:/var/lib/grafana
+      - ./grafana/operate-tasklist/operate.json:/var/lib/grafana/dashboards/operate.json
+      - ./grafana/operate-tasklist/tasklist.json:/var/lib/grafana/dashboards/tasklist.json
+      - ./grafana/operate-tasklist/elasticsearch.json:/var/lib/grafana/dashboards/elasticsearch.json
+      - ./grafana/operate-tasklist/spring.json:/var/lib/grafana/dashboards/spring.json
+      - ./grafana/operate-tasklist/jvm.json:/var/lib/grafana/dashboards/jvm.json
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=camunda
+      - GF_USERS_ALLOW_SIGN_UP=false
