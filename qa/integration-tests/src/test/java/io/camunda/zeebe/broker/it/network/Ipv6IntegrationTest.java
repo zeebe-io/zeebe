@@ -13,6 +13,7 @@ import io.camunda.zeebe.client.ZeebeClient;
 import io.camunda.zeebe.client.ZeebeClientBuilder;
 import io.camunda.zeebe.client.api.response.Topology;
 import io.camunda.zeebe.test.util.asserts.TopologyAssert;
+import io.camunda.zeebe.test.util.testcontainers.ZeebeTestContainerDefaults;
 import io.zeebe.containers.ZeebeBrokerContainer;
 import io.zeebe.containers.ZeebeGatewayContainer;
 import io.zeebe.containers.ZeebePort;
@@ -29,19 +30,15 @@ import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.Network;
-import org.testcontainers.utility.DockerImageName;
 
 @EnabledOnOs(
     value = OS.LINUX,
     disabledReason =
         "The Docker documentation says that IPv6 networking is only supported on Docker daemons running on Linux hosts. See: https://docs.docker.com/config/daemon/ipv6/")
-public class Ipv6IntegrationTest {
-
+final class Ipv6IntegrationTest {
   private static final int CLUSTER_SIZE = 3;
   private static final int PARTITION_COUNT = 1;
   private static final int REPLICATION_FACTOR = 3;
-  private static final DockerImageName ZEEBE_IMAGE_VERSION =
-      DockerImageName.parse("camunda/zeebe:current-test");
   private static final String NETWORK_ALIAS = Ipv6IntegrationTest.class.getName();
   private static final String BASE_PART_OF_SUBNET = "2081::aede:4844:fe00:";
   private static final String SUBNET = BASE_PART_OF_SUBNET + "0/123";
@@ -66,10 +63,13 @@ public class Ipv6IntegrationTest {
     initialContactPoints = new ArrayList<>();
     containers =
         IntStream.range(0, CLUSTER_SIZE)
-            .mapToObj(i -> new ZeebeBrokerContainer(ZEEBE_IMAGE_VERSION).withNetwork(network))
+            .mapToObj(
+                i ->
+                    new ZeebeBrokerContainer(ZeebeTestContainerDefaults.defaultTestImage())
+                        .withNetwork(network))
             .collect(Collectors.toList());
 
-    gateway = new ZeebeGatewayContainer(ZEEBE_IMAGE_VERSION);
+    gateway = new ZeebeGatewayContainer(ZeebeTestContainerDefaults.defaultTestImage());
     IntStream.range(0, CLUSTER_SIZE).forEach(i -> configureBrokerContainer(i, containers));
     configureGatewayContainer(gateway, initialContactPoints.get(0));
   }
@@ -81,7 +81,7 @@ public class Ipv6IntegrationTest {
   }
 
   @Test
-  public void shouldCommunicateOverIpv6() {
+  void shouldCommunicateOverIpv6() {
     // given
     containers.parallelStream().forEach(GenericContainer::start);
     gateway.start();

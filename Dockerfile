@@ -1,17 +1,29 @@
 ARG APP_ENV=prod
+ARG BASE=distball
 
-# Building builder image
-FROM alpine:latest as builder
+# Maven builder when no tarball is provided
+# This stage uses a local Maven .m2 repository; if you want to speed it up, build it locally as well
+# using it, and it will be included in the build context. Or simply do a simply link to your normal
+# repository.
+FROM maven:3.8.1-openjdk-11-slim as maven
+COPY ./ ./
+RUN mvn -T1C -DskipChecks -Dmaven.test.skip package
+RUN cp dist/target/camunda-cloud-zeebe-*.tar.gz /tmp/zeebe.tar.gz
+
+# Distball image builder
+FROM alpine:latest as distball
 ARG DISTBALL
 
-ENV TMP_ARCHIVE=/tmp/zeebe.tar.gz \
-    TMP_DIR=/tmp/zeebe \
+COPY ${DISTBALL} /tmp/zeebe.tar.gz
+
+# Unpack tar ball
+FROM ${BASE} as builder
+
+ENV TMP_DIR=/tmp/zeebe \
     TINI_VERSION=v0.19.0
 
-COPY ${DISTBALL} ${TMP_ARCHIVE}
-
 RUN mkdir -p ${TMP_DIR} && \
-    tar xfvz ${TMP_ARCHIVE} --strip 1 -C ${TMP_DIR} && \
+    tar xfvz /tmp/zeebe.tar.gz --strip 1 -C ${TMP_DIR} && \
     # already create volume dir to later have correct rights
     mkdir ${TMP_DIR}/data
 

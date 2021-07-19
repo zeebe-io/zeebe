@@ -1,0 +1,22 @@
+# Add files not required to build the docker image here to avoid rebuilding when modifying them
+# https://docs.docker.com/engine/reference/builder/#dockerignore-file
+.git
+.worktree
+.idea
+.github
+docs
+**/target
+# make sure modifying tests doesn't force us to rebuild the image
+**/src/test
+**/*.md
+.dockerignore
+.editorconfig
+.gitignore
+.lgtm.yml
+bors.toml
+createBenchmark.sh
+Jenkinsfile
+**/*.iml
+
+
+
