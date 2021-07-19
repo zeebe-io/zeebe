@@ -16,7 +16,6 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.concurrent.CountDownLatch;
 import org.apache.logging.log4j.LogManager;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,7 +35,6 @@ public class StandaloneBroker implements CommandLineRunner {
   @Autowired Environment springEnvironment;
   @Autowired SpringBrokerBridge springBrokerBridge;
 
-  private final CountDownLatch waiting_latch = new CountDownLatch(1);
   private String tempFolder;
 
   public static void main(final String[] args) throws Exception {
@@ -71,7 +69,6 @@ public class StandaloneBroker implements CommandLineRunner {
                 }
               }
             });
-    waiting_latch.await();
   }
 
   private Broker createBrokerInBaseDirectory() {

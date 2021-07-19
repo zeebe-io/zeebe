@@ -111,21 +111,15 @@ public class StandaloneGateway {
 
   public void run() throws IOException, InterruptedException {
     gateway.listenAndServe();
+  }
+
+  public void stop() {
     atomixCluster.stop();
     actorScheduler.stop();
   }
 
   public static void main(final String[] args) throws Exception {
     System.setProperty("spring.banner.location", "classpath:/assets/zeebe_gateway_banner.txt");
-
-    getRuntime()
-        .addShutdownHook(
-            new Thread("Gateway close thread") {
-              @Override
-              public void run() {
-                LogManager.shutdown();
-              }
-            });
 
     SpringApplication.run(Launcher.class, args);
   }
@@ -147,7 +141,21 @@ public class StandaloneGateway {
         LOG.info("Starting standalone gateway with configuration {}", gatewayCfg.toJson());
       }
 
-      new StandaloneGateway(gatewayCfg, springGatewayBridge).run();
+      final StandaloneGateway gateway = new StandaloneGateway(gatewayCfg, springGatewayBridge);
+      gateway.run();
+
+      getRuntime()
+          .addShutdownHook(
+              new Thread("Gateway close thread") {
+                @Override
+                public void run() {
+                  try {
+                    gateway.stop();
+                  } finally {
+                    LogManager.shutdown();
+                  }
+                }
+              });
     }
   }
 }
