@@ -51,14 +51,14 @@ public class ListLogStorage implements LogStorage {
       final ByteBuffer blockBuffer,
       final AppendListener listener) {
     try {
-      final var entry = new Entry(lowestPosition, highestPosition, blockBuffer);
+      final var entry = new Entry(blockBuffer);
       entries.add(entry);
       final var index = entries.size();
       positionIndexMapping.put(lowestPosition, index);
       listener.onWrite(index);
 
       if (positionListener != null) {
-        positionListener.accept(entry.getHighestPosition());
+        positionListener.accept(highestPosition);
       }
       listener.onCommit(index);
       commitListeners.forEach(CommitListener::onCommit);
@@ -78,22 +78,10 @@ public class ListLogStorage implements LogStorage {
   }
 
   private static final class Entry {
-    private final long lowestPosition;
-    private final long highestPosition;
     private final ByteBuffer data;
 
-    public Entry(final long lowestPosition, final long highestPosition, final ByteBuffer data) {
-      this.lowestPosition = lowestPosition;
-      this.highestPosition = highestPosition;
+    public Entry(final ByteBuffer data) {
       this.data = data;
-    }
-
-    public long getLowestPosition() {
-      return lowestPosition;
-    }
-
-    public long getHighestPosition() {
-      return highestPosition;
     }
 
     public ByteBuffer getData() {

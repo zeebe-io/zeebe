@@ -70,7 +70,7 @@ public class StreamProcessor extends Actor implements HealthMonitorable, LogReco
   private volatile long lastTickTime;
   private boolean shouldProcess = true;
   /** Recover future is completed after replay is done. */
-  private ActorFuture<Long> recoverFuture;
+  private ActorFuture<Long> replayFuture;
 
   protected StreamProcessor(final StreamProcessorBuilder processorBuilder) {
     actorSchedulingService = processorBuilder.getActorSchedulingService();
@@ -120,25 +120,32 @@ public class StreamProcessor extends Actor implements HealthMonitorable, LogReco
 
       healthCheckTick();
 
-      final ReplayStateMachine replayStateMachine = new ReplayStateMachine(processingContext);
-
+      final var replayStateMachine = new ReplayStateMachine(processingContext);
       // disable writing to the log stream
       processingContext.disableLogStreamWriter();
 
-      recoverFuture = replayStateMachine.startRecover(snapshotPosition);
-
-      actor.runOnCompletion(
-          recoverFuture,
-          (lastReprocessedPosition, throwable) -> {
-            if (throwable != null) {
-              LOG.error("Unexpected error on recovery happens.", throwable);
-              onFailure(throwable);
-            } else {
-              onRecovered(lastReprocessedPosition);
-              new StreamProcessorMetrics(partitionId)
-                  .recoveryTime(System.currentTimeMillis() - startTime);
-            }
-          });
+      replayFuture = replayStateMachine.startRecover(snapshotPosition);
+      if (processingContext.shouldReplayContinuously()) {
+        openFuture.complete(null);
+        replayFuture.onComplete(
+            (v, error) -> {
+              // future will only end on error
+              LOG.error("Unexpected error on recovery happens.", error);
+              onFailure(error);
+            });
+      } else {
+        replayFuture.onComplete(
+            (lastReprocessedPosition, throwable) -> {
+              if (throwable != null) {
+                LOG.error("Unexpected error on recovery happens.", throwable);
+                onFailure(throwable);
+              } else {
+                onRecovered(lastReprocessedPosition);
+                new StreamProcessorMetrics(partitionId)
+                    .recoveryTime(System.currentTimeMillis() - startTime);
+              }
+            });
+      }
     } catch (final RuntimeException e) {
       onFailure(e);
     }
@@ -366,7 +373,7 @@ public class StreamProcessor extends Actor implements HealthMonitorable, LogReco
   public ActorFuture<Void> pauseProcessing() {
     return actor.call(
         () ->
-            recoverFuture.onComplete(
+            replayFuture.onComplete(
                 (v, t) -> {
                   if (shouldProcess) {
                     setStateToPausedAndNotifyListeners();
@@ -384,7 +391,7 @@ public class StreamProcessor extends Actor implements HealthMonitorable, LogReco
   public void resumeProcessing() {
     actor.call(
         () ->
-            recoverFuture.onComplete(
+            replayFuture.onComplete(
                 (v, t) -> {
                   if (!shouldProcess) {
                     lifecycleAwareListeners.forEach(StreamProcessorLifecycleAware::onResumed);

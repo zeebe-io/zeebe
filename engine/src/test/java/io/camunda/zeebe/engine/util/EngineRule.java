@@ -87,7 +87,7 @@ public final class EngineRule extends ExternalResource {
   private final RecordingExporterTestWatcher recordingExporterTestWatcher =
       new RecordingExporterTestWatcher();
   private final int partitionCount;
-  private final boolean explicitStart;
+
   private Consumer<String> jobsAvailableCallback = type -> {};
   private Consumer<TypedRecord> onProcessedCallback = record -> {};
   private Consumer<LoggedEvent> onSkippedCallback = record -> {};
@@ -100,17 +100,17 @@ public final class EngineRule extends ExternalResource {
       new Int2ObjectHashMap<>();
 
   private long lastProcessedPosition = -1L;
+  private boolean shouldReplayContinuously;
 
   private EngineRule(final int partitionCount) {
-    this(partitionCount, false);
+    this(partitionCount, null);
   }
 
-  private EngineRule(final int partitionCount, final boolean explicitStart) {
+  private EngineRule(final int partitionCount, final ListLogStorage listLogStorage) {
     this.partitionCount = partitionCount;
-    this.explicitStart = explicitStart;
     environmentRule =
         new StreamProcessorRule(
-            PARTITION_ID, partitionCount, DefaultZeebeDbFactory.defaultFactory());
+            PARTITION_ID, partitionCount, DefaultZeebeDbFactory.defaultFactory(), listLogStorage);
   }
 
   public static EngineRule singlePartition() {
@@ -121,8 +121,8 @@ public final class EngineRule extends ExternalResource {
     return new EngineRule(partitionCount);
   }
 
-  public static EngineRule explicitStart() {
-    return new EngineRule(1, true);
+  public static EngineRule withSharedStorage(final ListLogStorage listLogStorage) {
+    return new EngineRule(1, listLogStorage);
   }
 
   @Override
@@ -136,9 +136,7 @@ public final class EngineRule extends ExternalResource {
   protected void before() {
     subscriptionHandlerExecutor = Executors.newSingleThreadExecutor();
 
-    if (!explicitStart) {
-      startProcessors();
-    }
+    startProcessors();
   }
 
   @Override
@@ -176,6 +174,11 @@ public final class EngineRule extends ExternalResource {
     return this;
   }
 
+  public EngineRule withContinuouslyReplay() {
+    shouldReplayContinuously = true;
+    return this;
+  }
+
   private void startProcessors() {
     final DeploymentRecord deploymentRecord = new DeploymentRecord();
     final UnsafeBuffer deploymentBuffer = new UnsafeBuffer(new byte[deploymentRecord.getLength()]);
@@ -187,27 +190,32 @@ public final class EngineRule extends ExternalResource {
           partitionReprocessingCompleteListeners.put(partitionId, reprocessingCompletedListener);
           environmentRule.startTypedStreamProcessor(
               partitionId,
-              (processingContext) ->
-                  EngineProcessors.createEngineProcessors(
-                          processingContext
-                              .onProcessedListener(
-                                  record -> {
-                                    lastProcessedPosition = record.getPosition();
-                                    onProcessedCallback.accept(record);
-                                  })
-                              .onSkippedListener(
-                                  record -> {
-                                    lastProcessedPosition = record.getPosition();
-                                    onSkippedCallback.accept(record);
-                                  }),
-                          partitionCount,
-                          new SubscriptionCommandSender(
-                              partitionId, new PartitionCommandSenderImpl()),
-                          deploymentDistributor,
-                          (key, partition) -> {},
-                          jobsAvailableCallback)
-                      .withListener(new ProcessingExporterTransistor())
-                      .withListener(reprocessingCompletedListener));
+              (processingContext) -> {
+                if (shouldReplayContinuously) {
+                  processingContext.replayContinuously();
+                }
+
+                return EngineProcessors.createEngineProcessors(
+                        processingContext
+                            .onProcessedListener(
+                                record -> {
+                                  lastProcessedPosition = record.getPosition();
+                                  onProcessedCallback.accept(record);
+                                })
+                            .onSkippedListener(
+                                record -> {
+                                  lastProcessedPosition = record.getPosition();
+                                  onSkippedCallback.accept(record);
+                                }),
+                        partitionCount,
+                        new SubscriptionCommandSender(
+                            partitionId, new PartitionCommandSenderImpl()),
+                        deploymentDistributor,
+                        (key, partition) -> {},
+                        jobsAvailableCallback)
+                    .withListener(new ProcessingExporterTransistor())
+                    .withListener(reprocessingCompletedListener);
+              });
 
           // sequenialize the commands to avoid concurrency
           subscriptionHandlers.put(

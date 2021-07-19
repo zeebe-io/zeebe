@@ -77,6 +77,11 @@ public final class StreamProcessorBuilder {
     return this;
   }
 
+  public StreamProcessorBuilder replayContinuously() {
+    processingContext.replayContinuously();
+    return this;
+  }
+
   public TypedRecordProcessorFactory getTypedRecordProcessorFactory() {
     return typedRecordProcessorFactory;
   }

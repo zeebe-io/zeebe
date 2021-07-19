@@ -63,6 +63,7 @@ public final class StreamProcessorRule implements TestRule {
   private final RuleChain chain;
   private TestStreams streams;
   private StreamProcessingComposite streamProcessingComposite;
+  private ListLogStorage sharedStorage = null;
 
   public StreamProcessorRule() {
     this(new TemporaryFolder());
@@ -73,7 +74,7 @@ public final class StreamProcessorRule implements TestRule {
   }
 
   public StreamProcessorRule(final int partitionId) {
-    this(partitionId, 1, DefaultZeebeDbFactory.defaultFactory());
+    this(partitionId, 1, DefaultZeebeDbFactory.defaultFactory(), new TemporaryFolder());
   }
 
   public StreamProcessorRule(final int partitionId, final TemporaryFolder temporaryFolder) {
@@ -81,8 +82,12 @@ public final class StreamProcessorRule implements TestRule {
   }
 
   public StreamProcessorRule(
-      final int startPartitionId, final int partitionCount, final ZeebeDbFactory dbFactory) {
+      final int startPartitionId,
+      final int partitionCount,
+      final ZeebeDbFactory dbFactory,
+      final ListLogStorage listLogStorage) {
     this(startPartitionId, partitionCount, dbFactory, new TemporaryFolder());
+    sharedStorage = listLogStorage;
   }
 
   public StreamProcessorRule(
@@ -315,7 +320,11 @@ public final class StreamProcessorRule implements TestRule {
 
       int partitionId = startPartitionId;
       for (int i = 0; i < partitionCount; i++) {
-        streams.createLogStream(getLogName(partitionId), partitionId++);
+        if (sharedStorage != null) {
+          streams.createLogStream(getLogName(partitionId), partitionId++, sharedStorage);
+        } else {
+          streams.createLogStream(getLogName(partitionId), partitionId++);
+        }
       }
 
       streamProcessingComposite =

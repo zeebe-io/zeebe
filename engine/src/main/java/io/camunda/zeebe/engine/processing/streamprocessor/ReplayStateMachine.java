@@ -14,6 +14,7 @@ import io.camunda.zeebe.engine.state.KeyGeneratorControls;
 import io.camunda.zeebe.engine.state.mutable.MutableLastProcessedPositionState;
 import io.camunda.zeebe.engine.state.mutable.MutableZeebeState;
 import io.camunda.zeebe.logstreams.impl.Loggers;
+import io.camunda.zeebe.logstreams.log.LogStream;
 import io.camunda.zeebe.logstreams.log.LogStreamReader;
 import io.camunda.zeebe.logstreams.log.LoggedEvent;
 import io.camunda.zeebe.protocol.Protocol;
@@ -72,6 +73,8 @@ public final class ReplayStateMachine {
   private ActorFuture<Long> recoveryFuture;
   private LoggedEvent currentEvent;
   private ZeebeDbTransaction zeebeDbTransaction;
+  private final boolean shouldReplayContinuously;
+  private final LogStream logStream;
 
   public ReplayStateMachine(final ProcessingContext context) {
     actor = context.getActor();
@@ -87,6 +90,8 @@ public final class ReplayStateMachine {
     typedEvent = new TypedEventImpl(context.getLogStream().getPartitionId());
     updateStateRetryStrategy = new EndlessRetryStrategy(actor);
     processRetryStrategy = new EndlessRetryStrategy(actor);
+    shouldReplayContinuously = context.shouldReplayContinuously();
+    logStream = context.getLogStream();
   }
 
   /**
@@ -104,22 +109,49 @@ public final class ReplayStateMachine {
     // start after snapshot
     logStreamReader.seekToNextEvent(snapshotPosition);
 
-    if (logStreamReader.hasNext()) {
-      LOG.info("Processor starts replay of events. [snapshot-position: {}]", snapshotPosition);
+    if (shouldReplayContinuously) {
+      logStream.registerRecordAvailableListener(this::recordAvailable);
+
+      LOG.info(
+          "Processor starts continuously replay of events. [snapshot-position: {}]",
+          snapshotPosition);
       replayNextEvent();
-    } else if (snapshotPosition > 0) {
-      recoveryFuture.complete(snapshotPosition);
     } else {
-      recoveryFuture.complete(StreamProcessor.UNSET_POSITION);
+      if (logStreamReader.hasNext()) {
+        LOG.info("Processor starts replay of events. [snapshot-position: {}]", snapshotPosition);
+        replayNextEvent();
+      } else if (snapshotPosition > 0) {
+        recoveryFuture.complete(snapshotPosition);
+      } else {
+        recoveryFuture.complete(StreamProcessor.UNSET_POSITION);
+      }
     }
 
     return recoveryFuture;
   }
 
+  /**
+   * Will be called by the LogStream#RecordAvailableListener, we will schedule the next replay of
+   * the record
+   */
+  private void recordAvailable() {
+    actor.call(this::replayNextEvent);
+  }
+
   private void replayNextEvent() {
     try {
 
+      if (currentEvent != null) {
+        // already replay running
+        return;
+      }
+
       if (!logStreamReader.hasNext()) {
+        if (shouldReplayContinuously) {
+          // we await the next call by LogStream#RecordAvailableListener
+          return;
+        }
+
         onRecordsReplayed();
         return;
       }
@@ -195,6 +227,8 @@ public final class ReplayStateMachine {
       // remember the highest key on the stream to restore the key generator after replay
       highestRecordKey = Math.max(currentRecordKey, highestRecordKey);
     }
+
+    currentEvent = null;
 
     actor.submit(this::replayNextEvent);
   }
