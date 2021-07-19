@@ -8,6 +8,8 @@
 package io.camunda.zeebe.broker.exporter.stream;
 
 import io.camunda.zeebe.broker.Loggers;
+import io.camunda.zeebe.broker.exporter.stream.ExporterDirectorContext.ExporterMode;
+import io.camunda.zeebe.broker.system.partitions.PartitionMessagingService;
 import io.camunda.zeebe.db.ZeebeDb;
 import io.camunda.zeebe.engine.processing.streamprocessor.EventFilter;
 import io.camunda.zeebe.engine.processing.streamprocessor.RecordValues;
@@ -52,6 +54,7 @@ public final class ExporterDirector extends Actor implements HealthMonitorable, 
       "Expected to export record '{}' successfully, but exception was thrown.";
   private static final String ERROR_MESSAGE_RECOVER_FROM_SNAPSHOT_FAILED =
       "Expected to find event with the snapshot position %s in log stream, but nothing was found. Failed to recover '%s'.";
+  private static final String EXPORTER_STATE_TOPIC_FORMAT = "exporterState-%d";
 
   private static final Logger LOG = Loggers.EXPORTER_LOGGER;
   private final AtomicBoolean isOpened = new AtomicBoolean(false);
@@ -72,6 +75,10 @@ public final class ExporterDirector extends Actor implements HealthMonitorable, 
   private boolean inExportingPhase;
   private boolean isPaused;
   private ExporterPhase exporterPhase;
+  private final PartitionMessagingService partitionMessagingService;
+  private final String exporterPositionsTopic;
+  private final ExporterMode exporterMode;
+  private ExporterPositionsDistributionService exporterDistributionService;
 
   public ExporterDirector(final ExporterDirectorContext context, final boolean shouldPauseOnStart) {
     name = context.getName();
@@ -79,13 +86,16 @@ public final class ExporterDirector extends Actor implements HealthMonitorable, 
         context.getDescriptors().stream().map(ExporterContainer::new).collect(Collectors.toList());
 
     logStream = Objects.requireNonNull(context.getLogStream());
-    final int partitionId = logStream.getPartitionId();
+    final var partitionId = logStream.getPartitionId();
     metrics = new ExporterMetrics(partitionId);
     recordExporter = new RecordExporter(metrics, containers, partitionId);
     exportingRetryStrategy = new BackOffRetryStrategy(actor, Duration.ofSeconds(10));
     recordWrapStrategy = new EndlessRetryStrategy(actor);
     zeebeDb = context.getZeebeDb();
     isPaused = shouldPauseOnStart;
+    partitionMessagingService = context.getPartitionMessagingService();
+    exporterPositionsTopic = String.format(EXPORTER_STATE_TOPIC_FORMAT, partitionId);
+    exporterMode = context.getExporterMode();
   }
 
   public ActorFuture<Void> startAsync(final ActorSchedulingService actorSchedulingService) {
@@ -151,22 +161,28 @@ public final class ExporterDirector extends Actor implements HealthMonitorable, 
     try {
       LOG.debug("Recovering exporter from snapshot");
       recoverFromSnapshot();
+      exporterDistributionService =
+          new ExporterPositionsDistributionService(
+              state::setPosition, partitionMessagingService, exporterPositionsTopic);
 
-      for (final ExporterContainer container : containers) {
-        container.initContainer(actor, metrics, state);
-        container.configureExporter();
+      if (exporterMode == ExporterMode.ACTIVE) {
+        initActiveExportingMode();
       }
-
-      eventFilter = createEventFilter(containers);
-      LOG.debug("Set event filter for exporters: {}", eventFilter);
-
     } catch (final Exception e) {
       onFailure();
       LangUtil.rethrowUnchecked(e);
     }
 
     isOpened.set(true);
-    onSnapshotRecovered();
+
+    // remove exporters from state
+    // which are no longer in our configuration
+    clearExporterState();
+    if (exporterMode == ExporterMode.ACTIVE) {
+      startActiveExportingMode();
+    } else { // PASSIVE, we consume the messages and set it in our state
+      exporterDistributionService.subscribeForExporterPositions(actor::submit);
+    }
   }
 
   @Override
@@ -189,7 +205,12 @@ public final class ExporterDirector extends Actor implements HealthMonitorable, 
 
   @Override
   protected void handleFailure(final Exception failure) {
-    LOG.error("Actor '{}' failed in phase {} with: {} .", name, actor.getLifecyclePhase(), failure);
+    LOG.error(
+        "Actor '{}' failed in phase {} with: {} .",
+        name,
+        actor.getLifecyclePhase(),
+        failure,
+        failure);
     actor.fail();
 
     if (failure instanceof UnrecoverableException) {
@@ -205,6 +226,16 @@ public final class ExporterDirector extends Actor implements HealthMonitorable, 
         listener.onFailure();
       }
     }
+  }
+
+  private void initActiveExportingMode() throws Exception {
+    for (final ExporterContainer container : containers) {
+      container.initContainer(actor, metrics, state);
+      container.configureExporter();
+    }
+
+    eventFilter = createEventFilter(containers);
+    LOG.debug("Set event filter for exporters: {}", eventFilter);
   }
 
   private void recoverFromSnapshot() {
@@ -250,7 +281,7 @@ public final class ExporterDirector extends Actor implements HealthMonitorable, 
     actor.close();
   }
 
-  private void onSnapshotRecovered() {
+  private void startActiveExportingMode() {
     logStream.registerRecordAvailableListener(this);
 
     // start reading
@@ -258,8 +289,6 @@ public final class ExporterDirector extends Actor implements HealthMonitorable, 
       container.initPosition();
       container.openExporter();
     }
-
-    clearExporterState();
 
     if (state.hasExporters()) {
       if (!isPaused) {
@@ -269,9 +298,17 @@ public final class ExporterDirector extends Actor implements HealthMonitorable, 
         exporterPhase = ExporterPhase.PAUSED;
       }
 
+      actor.runAtFixedRate(Duration.ofSeconds(15), this::sendExporterState);
+
     } else {
       actor.close();
     }
+  }
+
+  private void sendExporterState() {
+    final var exportPositionsMessage = new ExporterPositionsMessage();
+    state.visitPositions(exportPositionsMessage::putExporter);
+    exporterDistributionService.publishExporterPositions(exportPositionsMessage);
   }
 
   private void skipRecord(final LoggedEvent currentEvent) {

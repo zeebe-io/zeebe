@@ -22,9 +22,11 @@
 
   </types>
 
-  <sbe:message name="ErrorResponse" id="1">
-    <field name="code" id="0" type="errorResponseCode"/>
-    <data name="data" id="1" type="varDataEncoding"/>
+  <sbe:message id="1" name="ExporterPositions">
+    <group id="0" name="positions">
+      <field id="0" name="position" type="uint64" semanticType="long"/>
+      <data id="1" name="exporterId" type="varDataEncoding" semanticType="string"/>
+    </group>
   </sbe:message>
 
   <sbe:message name="PushDeploymentRequest" id="2">
