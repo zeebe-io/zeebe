@@ -12,7 +12,8 @@ echo "Waiting for result of $businessKey"
 jobKey=""
 
 while true; do
-    "${zbctl}" activate jobs "$businessKey" > activationresponse.txt 2>/dev/null
+    # activate jobs non-zero exits can be ignored with `<command> || true`
+    "${zbctl}" activate jobs "$businessKey" > activationresponse.txt 2>/dev/null || true
     jobKey=$(jq -r '.jobs[0].key' < activationresponse.txt)
 
     if [[ -z "$jobKey" || "$jobKey" == "null" ]]; then
